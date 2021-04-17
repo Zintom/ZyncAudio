@@ -13,6 +13,8 @@ namespace ZyncAudio
         Action<SocketException, Socket>? SocketError { get; set; }
 
         Action? ClientConnected { get; set; }
+       
+        List<Socket> Clients { get; }
 
         void Open(IPAddress address, int port);
 
@@ -29,9 +31,9 @@ namespace ZyncAudio
     {
         private readonly Socket _listener;
 
-        private readonly List<Socket> _clients;
-
         private readonly ILogger? _logger;
+
+        public List<Socket> Clients { get; private set; } = new();
 
         public Action<byte[], Socket>? DataReceived { get; set; }
 
@@ -42,7 +44,7 @@ namespace ZyncAudio
         public Server(ILogger? logger)
         {
             _listener = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-            _clients = new List<Socket>();
+            Clients = new List<Socket>();
             _logger = logger;
         }
 
@@ -66,7 +68,7 @@ namespace ZyncAudio
             _logger?.Log($"Client connected ({client.RemoteEndPoint})");
             ClientConnected?.Invoke();
 
-            _clients.Add(client);
+            Clients.Add(client);
 
             client.BeginReceiveLengthPrefixed(
                 true,
@@ -84,15 +86,15 @@ namespace ZyncAudio
 
         public void SendAll(byte[] data)
         {
-            for (int i = 0; i < _clients.Count; i++)
+            for (int i = 0; i < Clients.Count; i++)
             {
-                _clients[i].SendLengthPrefixed(data, HandleSocketException);
+                Clients[i].SendLengthPrefixed(data, HandleSocketException);
             }
         }
 
         private void HandleSocketException(SocketException e, Socket client)
         {
-            _clients.Remove(client);
+            Clients.Remove(client);
             _logger?.Log($"Client forcefully disconnected ({client.RemoteEndPoint})");
 
             SocketError?.Invoke(e, client);
