@@ -29,6 +29,7 @@ namespace ZyncAudio
 
             _handlers.Add(MessageIdentifier.WaveFormatInformation, HandleWaveFormatInformation);
             _handlers.Add(MessageIdentifier.AudioSamples, HandleAudioSamples);
+            _handlers.Add(MessageIdentifier.Request | MessageIdentifier.Ping, HandlePingRequest);
             _logger = logger;
         }
 
@@ -44,6 +45,11 @@ namespace ZyncAudio
             {
                 throw new NotImplementedException();
             }
+        }
+
+        private void HandlePingRequest(byte[] data)
+        {
+            SocketClient.Send(BitConverter.GetBytes((int)(MessageIdentifier.Response | MessageIdentifier.Ping)));
         }
 
         private void HandleWaveFormatInformation(byte[] data)
@@ -70,8 +76,8 @@ namespace ZyncAudio
                 _bufferedWaveProvider = new BufferedWaveProvider(_lastWaveFormatReceived);
 
                 int sampleBlockSize = _lastWaveFormatReceived.GetBitrate() / 8;
-                // 5 second audio buffer.
-                _bufferedWaveProvider.BufferLength = sampleBlockSize * 5;
+                // 30 second audio buffer.
+                _bufferedWaveProvider.BufferLength = sampleBlockSize * 30;
 
                 new Thread(() =>
                 {
