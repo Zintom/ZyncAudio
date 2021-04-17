@@ -1,8 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace ZyncAudio
 {
@@ -13,6 +9,7 @@ namespace ZyncAudio
         Request = 1,
         Response = 2,
         WaveFormatInformation = 4,
-        AudioSamples = 8
+        AudioSamples = 8,
+        Ping = 16
     }
 }
