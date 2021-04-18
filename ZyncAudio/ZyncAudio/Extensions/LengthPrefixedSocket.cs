@@ -83,9 +83,13 @@ namespace ZyncAudio.Extensions
 
                 state.WorkerSocket.BeginReceive(state.Buffer, 0, LengthToReceive, SocketFlags.None, EndReceiveData, state);
             }
-            catch (SocketException e) when (e.SocketErrorCode == SocketError.ConnectionReset)
+            catch (SocketException e)
             {
                 state.SocketExceptionThrown?.Invoke(e, state.WorkerSocket);
+            }
+            catch (ObjectDisposedException e)
+            {
+
             }
         }
 
@@ -114,10 +118,14 @@ namespace ZyncAudio.Extensions
                     state.WorkerSocket.BeginReceive(state.Buffer, 0, state.Buffer.Length, SocketFlags.None, EndReceivePrefix, state);
                 }
             }
-            catch (SocketException e) when (e.SocketErrorCode == SocketError.ConnectionReset)
+            catch (SocketException e)
             {
                 // Send exception back to caller.
                 state.SocketExceptionThrown?.Invoke(e, state.WorkerSocket);
+            }
+            catch (ObjectDisposedException e)
+            {
+
             }
         }
 
