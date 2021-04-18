@@ -4,10 +4,12 @@ using System.ComponentModel;
 using System.Data;
 using System.Diagnostics;
 using System.Drawing;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -16,9 +18,14 @@ namespace ZyncAudio
     public partial class HostForm : Form
     {
         private Server _server;
+
         private AudioServer _audioServer;
 
         private ILogger _logger;
+
+        private CancellationTokenSource? _cancelPlaybackSource;
+
+        private Queue<string> _playingQueue = new();
 
         public HostForm()
         {
@@ -55,9 +62,9 @@ namespace ZyncAudio
             Invoke(new Action(() =>
             {
                 string remoteAddress = client.RemoteEndPoint?.ToString() ?? "null";
-                foreach(ListViewItem item in ClientListView.Items)
+                foreach (ListViewItem item in ClientListView.Items)
                 {
-                    if(item.Text == remoteAddress)
+                    if (item.Text == remoteAddress)
                     {
                         ClientListView.Items.Remove(item);
                         break;
@@ -71,14 +78,19 @@ namespace ZyncAudio
 
         }
 
-        private void PlayBtn_Click(object sender, EventArgs e)
+        private async void PlayBtn_Click(object sender, EventArgs e)
         {
-            _audioServer.Play(@"D:\All Files\Music\04. Mike Ault - Flying Forever (feat. Morgan Perry).flac");
+            //_audioServer.Play(@"D:\All Files\Music\04. Mike Ault - Flying Forever (feat. Morgan Perry).flac");
+
+            _cancelPlaybackSource?.Cancel();
+            _cancelPlaybackSource = new CancellationTokenSource();
+            await _audioServer.PlayQueue(_playingQueue, _cancelPlaybackSource.Token);
         }
 
         private void StopBtn_Click(object sender, EventArgs e)
         {
             _audioServer.Stop();
+            _cancelPlaybackSource?.Cancel();
         }
 
         private void CloseEntryBtn_Click(object sender, EventArgs e)
@@ -92,14 +104,14 @@ namespace ZyncAudio
 
         private void PingChecker_Tick(object sender, EventArgs e)
         {
-            foreach(var pair in _audioServer.Pinger.PingStatistics)
+            foreach (var pair in _audioServer.Pinger.PingStatistics)
             {
                 string ping = pair.Value + "ms";
                 string address = pair.Key.RemoteEndPoint?.ToString() ?? "null";
 
-                foreach(ListViewItem item in ClientListView.Items)
+                foreach (ListViewItem item in ClientListView.Items)
                 {
-                    if(item.Text == address)
+                    if (item.Text == address)
                     {
                         item.SubItems[1].Text = ping;
                     }
@@ -111,6 +123,28 @@ namespace ZyncAudio
         {
             _audioServer.Stop();
             _server.Close();
+        }
+
+        private void LoadFolderBtn_Click(object sender, EventArgs e)
+        {
+            using (var folderBrowser = new FolderBrowserDialog())
+            {
+                var result = folderBrowser.ShowDialog();
+                if (result != DialogResult.OK) { return; }
+
+                string folder = folderBrowser.SelectedPath;
+
+                foreach (var file in Directory.GetFiles(folder))
+                {
+                    if (file.EndsWith(".wav")
+                        || file.EndsWith(".mp3")
+                        || file.EndsWith(".flac"))
+                    {
+                        _playingQueue.Enqueue(file);
+                        PlayQueue.Items.Add(new FileInfo(file).Name);
+                    }
+                }
+            }
         }
     }
 
