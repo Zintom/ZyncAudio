@@ -12,11 +12,15 @@ namespace ZyncAudio
 
         Action<SocketException, Socket>? SocketError { get; set; }
 
-        Action? ClientConnected { get; set; }
-       
+        Action<Socket>? ClientConnected { get; set; }
+
+        Action<Socket>? ClientDisconnected { get; set; }
+
         List<Socket> Clients { get; }
 
-        void Open(IPAddress address, int port);
+        bool Open(IPAddress address, int port);
+
+        bool Close();
 
         void Send(byte[] data, Socket client);
 
@@ -29,7 +33,18 @@ namespace ZyncAudio
     /// <remarks>A receive loop is started for each client that connects.</remarks>
     public sealed class Server : ISocketServer
     {
-        private readonly Socket _listener;
+        enum ConnectionState
+        {
+            None,
+            Open,
+            Closed
+        }
+
+        private Socket? _listener;
+
+        private ConnectionState _connectionState = ConnectionState.None;
+
+        private object _stateChangeLockObject = new();
 
         private readonly ILogger? _logger;
 
@@ -39,11 +54,12 @@ namespace ZyncAudio
 
         public Action<SocketException, Socket>? SocketError { get; set; }
 
-        public Action? ClientConnected { get; set; }
+        public Action<Socket>? ClientConnected { get; set; }
+
+        public Action<Socket>? ClientDisconnected { get; set; }
 
         public Server(ILogger? logger)
         {
-            _listener = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             Clients = new List<Socket>();
             _logger = logger;
         }
@@ -51,32 +67,79 @@ namespace ZyncAudio
         /// <summary>
         /// Opens the server on the given <paramref name="address"/> on the given <paramref name="port"/>.
         /// </summary>
-        public void Open(IPAddress address, int port)
+        public bool Open(IPAddress address, int port)
         {
-            _listener.Bind(new IPEndPoint(address, port));
-            _listener.Listen();
+            lock (_stateChangeLockObject)
+            {
+                if (_connectionState != ConnectionState.None) { return false; }
+                _connectionState = ConnectionState.Open;
 
-            _logger?.Log($"Server open at {address} on port {port}");
+                _listener = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+                _listener.Bind(new IPEndPoint(address, port));
+                _listener.Listen();
 
-            _listener.BeginAccept(EndAccept, null);
+                _logger?.Log($"Server open at {address} on port {port}");
+
+                _listener.BeginAccept(EndAccept, null);
+
+                return true;
+            }
         }
 
         private void EndAccept(IAsyncResult ar)
         {
-            Socket client = _listener.EndAccept(ar);
+            lock (_stateChangeLockObject)
+            {
+                if (_connectionState != ConnectionState.Open) { return; }
+                if (_listener == null) { return; }
 
-            _logger?.Log($"Client connected ({client.RemoteEndPoint})");
-            ClientConnected?.Invoke();
+                Socket client;
+                try
+                {
+                    client = _listener.EndAccept(ar);
+                }
+                catch (ObjectDisposedException) { return; }
 
-            Clients.Add(client);
+                _logger?.Log($"Client connected ({client.RemoteEndPoint})");
+                ClientConnected?.Invoke(client);
 
-            client.BeginReceiveLengthPrefixed(
-                true,
-                (d, s) => { DataReceived?.Invoke(d, s); },
-                HandleSocketException);
+                Clients.Add(client);
 
-            // Begin accepting other clients
-            _listener.BeginAccept(EndAccept, null);
+                client.BeginReceiveLengthPrefixed(
+                    true,
+                    (d, s) => { DataReceived?.Invoke(d, s); },
+                    HandleSocketException);
+
+                // Begin accepting other clients
+                _listener.BeginAccept(EndAccept, null);
+            }
+        }
+
+        public bool Close()
+        {
+            lock (_stateChangeLockObject)
+            {
+                if(_connectionState != ConnectionState.Open) { return false; }
+                _connectionState = ConnectionState.Closed;
+
+                StopAccepting();
+                for (int i = 0; i < Clients.Count; i++)
+                {
+                    Clients[i].Shutdown(SocketShutdown.Both);
+                    Clients[i].Disconnect(false);
+                    Clients[i].Dispose();
+                    Clients.RemoveAt(i);
+                    i--;
+                }
+
+                return true;
+            }
+        }
+
+        public void StopAccepting()
+        {
+            _listener?.Dispose();
+            _listener = null;
         }
 
         public void Send(byte[] data, Socket client)
@@ -95,6 +158,7 @@ namespace ZyncAudio
         private void HandleSocketException(SocketException e, Socket client)
         {
             Clients.Remove(client);
+            ClientDisconnected?.Invoke(client);
             _logger?.Log($"Client forcefully disconnected ({client.RemoteEndPoint})");
 
             SocketError?.Invoke(e, client);

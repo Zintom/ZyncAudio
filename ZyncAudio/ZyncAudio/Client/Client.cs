@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
@@ -12,11 +13,28 @@ namespace ZyncAudio
 
         Action<SocketException, Socket>? SocketError { get; set; }
 
-        void Connect(IPAddress address, int port);
+        /// <summary>
+        /// Attempts to connect to the target machine so long as the client is not already connecting or connected.
+        /// </summary>
+        /// <returns><see langword="true"/> if we will be connecting to the machine, <see langword="false"/> if not.</returns>
+        bool Connect(IPAddress address, int port);
+
+        /// <summary>
+        /// Attempts to disconnect from the currently connected machine so long as the client is not already disconnected.
+        /// </summary>
+        /// <returns><see langword="true"/> if we disconnected, <see langword="false"/> if not.</returns>
+        bool Disconnect();
 
         void Send(byte[] data);
 
         void Send<T>(byte[] data, TaskCompletionSource<T>? taskCompletionSource);
+    }
+
+    enum ConnectionState
+    {
+        Disconnected,
+        Connecting,
+        Connected,
     }
 
     /// <summary>
@@ -28,33 +46,76 @@ namespace ZyncAudio
     /// </remarks>
     public sealed class Client : ISocketClient
     {
-        private readonly Socket _workerSocket;
+        private Socket? _workerSocket;
 
         public Action<byte[], Socket>? DataReceived { get; set; }
 
         public Action<SocketException, Socket>? SocketError { get; set; }
 
+        private object _stateChangeLockObject = new();
+
+        private ConnectionState _connectionState = ConnectionState.Disconnected;
+
         public Client()
         {
-            _workerSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-            _workerSocket.ReceiveTimeout = 5000;
         }
 
-        /// <summary>
-        /// Connects to the remote <paramref name="address"/> on the given <paramref name="port"/>
-        /// and begins a receive loop once connection is established.
-        /// </summary>
-        public void Connect(IPAddress address, int port)
+        public bool Connect(IPAddress address, int port)
         {
-            _workerSocket.BeginConnect(new IPEndPoint(address, port), EndConnect, null);
+            lock (_stateChangeLockObject)
+            {
+                if (_connectionState == ConnectionState.Connected
+                    || _connectionState == ConnectionState.Connecting) { return false; }
+                _connectionState = ConnectionState.Connecting;
+
+                _workerSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+                _workerSocket.ReceiveTimeout = 5000;
+                _workerSocket.BeginConnect(new IPEndPoint(address, port), EndConnect, null);
+
+                return true;
+            }
         }
 
         private void EndConnect(IAsyncResult ar)
         {
-            _workerSocket.EndConnect(ar);
+            lock (_stateChangeLockObject)
+            {
+                if (_connectionState != ConnectionState.Connecting) { return; }
+                _connectionState = ConnectionState.Connected;
 
-            // Begin receive loop
-            _workerSocket.BeginReceiveLengthPrefixed(true, DataReceived, SocketError);
+                try
+                {
+                    _workerSocket!.EndConnect(ar);
+                }
+                catch (SocketException e) when (e.SocketErrorCode == System.Net.Sockets.SocketError.ConnectionRefused)
+                {
+                    SocketError?.Invoke(e, _workerSocket!);
+                    Disconnect();
+                    return;
+                }
+
+                // Begin receive loop
+                _workerSocket.BeginReceiveLengthPrefixed(true, DataReceived, SocketError);
+            }
+        }
+
+        public bool Disconnect()
+        {
+            lock (_stateChangeLockObject)
+            {
+                if (_connectionState == ConnectionState.Disconnected) { return false; }
+                _connectionState = ConnectionState.Disconnected;
+
+                if (_workerSocket?.Connected ?? false)
+                {
+                    _workerSocket?.Shutdown(SocketShutdown.Both);
+                    _workerSocket?.Disconnect(false);
+                }
+                _workerSocket?.Dispose();
+                _workerSocket = null;
+
+                return true;
+            }
         }
 
         public void Send(byte[] data)

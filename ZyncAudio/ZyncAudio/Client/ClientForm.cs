@@ -5,6 +5,7 @@ using System.Data;
 using System.Drawing;
 using System.Linq;
 using System.Net;
+using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -22,18 +23,46 @@ namespace ZyncAudio
         {
             InitializeComponent();
 
-            HostForm host = new HostForm();
-            host.Show();
-
             _logger = new ConsoleLogger();
             _client = new Client();
+            _client.SocketError = HandleSocketError;
             _audioClient = new AudioClient(_client, _logger);
-
-            _client.Connect(IPAddress.Loopback, 60759);
         }
 
         private void ClientForm_Load(object sender, EventArgs e)
         {
+        }
+
+        private void HostButton_Click(object sender, EventArgs e)
+        {
+            HostForm host = new HostForm();
+            host.Show();
+        }
+
+        public void HandleSocketError(SocketException e, Socket _)
+        {
+            MessageBox.Show(caption: nameof(SocketException), text: e.Message);
+        }
+
+        private bool _connectToggle = false;
+        private void ConnectBtn_Click(object sender, EventArgs e)
+        {
+            if (_connectToggle)
+            {
+                if (_client.Disconnect())
+                {
+                    _connectToggle = !_connectToggle;
+                    ConnectBtn.Text = "Connect";
+                }
+            }
+            else
+            {
+                if (_client.Connect(IPAddress.Parse(IPAddressInputBox.Text), 60759))
+                {
+                    _connectToggle = !_connectToggle;
+                    ConnectBtn.Text = "Disconnect";
+                }
+            }
         }
     }
 }

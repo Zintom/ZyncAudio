@@ -10,6 +10,8 @@ namespace ZyncAudio
         Response = 2,
         WaveFormatInformation = 4,
         AudioSamples = 8,
-        Ping = 16
+        PlayAudio = 16,
+        StopAudio = 32,
+        Ping = 64
     }
 }

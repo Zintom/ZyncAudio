@@ -10,6 +10,12 @@ using ZyncAudio.Extensions;
 
 namespace ZyncAudio
 {
+    enum PlaybackState
+    {
+        Stopped,
+        Playing
+    }
+
     public class AudioServer
     {
 
@@ -19,8 +25,9 @@ namespace ZyncAudio
 
         private Dictionary<MessageIdentifier, Action<byte[], Socket>> _handlers = new();
 
-        private Dictionary<Socket, Stopwatch> _pingWatches = new();
-        private Dictionary<Socket, long> _pingStats = new();
+        public Pinger Pinger { get; private init; }
+
+        private PlaybackState _playbackState = PlaybackState.Stopped;
 
         public AudioServer(ISocketServer socketServer)
         {
@@ -28,79 +35,151 @@ namespace ZyncAudio
             SocketServer.DataReceived = DataReceived;
             SocketServer.SocketError = SocketError;
 
-            _handlers.Add(MessageIdentifier.Response | MessageIdentifier.Ping, HandlePingResponse);
+            Pinger = new Pinger(SocketServer);
 
-            PingClients();
+            _handlers.Add(MessageIdentifier.Response | MessageIdentifier.Ping, Pinger.PingResponse);
+
+            Pinger.Start();
         }
 
         /// <summary>
-        /// Pings clients periodically to get their latency times.
+        /// Used to ensure Play and Stop are not able to be executed at the same time.
         /// </summary>
-        private async void PingClients()
+        private object _playOrStopLockObject = new();
+
+        public bool Play(string fileName)
         {
-            while (IsOpen)
+            lock (_playOrStopLockObject)
             {
-                foreach (var client in SocketServer.Clients)
+                if (_playbackState != PlaybackState.Stopped)
                 {
-                    // Initialize a stopwatch for this client if it does not exist.
-                    if (!_pingWatches.TryGetValue(client, out Stopwatch? watch))
-                    {
-                        watch = new Stopwatch();
-                        _pingWatches.Add(client, watch);
-                    }
-
-                    // If we are still waiting for a response from the client then pospone till the next check.
-                    if (watch.ElapsedMilliseconds > 0)
-                    {
-                        continue;
-                    }
-
-                    watch.Start();
-
-                    SocketServer.Send(BitConverter.GetBytes((int)(MessageIdentifier.Request | MessageIdentifier.Ping)), client);
+                    return false;
                 }
 
-                await Task.Delay(1000);
+                _playbackState = PlaybackState.Playing;
+
+                Task.Run(() => { PlaySong(fileName); });
+                return true;
             }
         }
 
-        private void HandlePingResponse(byte[] data, Socket socket)
-        {
-            var watch = _pingWatches[socket];
-            watch.Stop();
+        private volatile bool _stopPlayback = false;
+        private readonly ManualResetEvent _stoppedPlayback = new ManualResetEvent(false);
 
-            _pingStats[socket] = watch.ElapsedMilliseconds;
-            watch.Reset();
+        public bool Stop()
+        {
+            lock (_playOrStopLockObject)
+            {
+                if (_playbackState != PlaybackState.Playing)
+                {
+                    return false;
+                }
+
+                _stoppedPlayback.Reset();
+
+                // Inform the player that we wish to stop.
+                _stopPlayback = true;
+
+                // Wait for the sample distributor to respond.
+                _stoppedPlayback.WaitOne();
+
+                // Reset state to stopped.
+                _stopPlayback = false;
+                _playbackState = PlaybackState.Stopped;
+
+                return true;
+            }
         }
 
-        public void PlaySong(string fileName)
+        private void PlaySong(string fileName)
         {
-            new Thread(() =>
+            // Inform all clients to stop any audio they might be playing.
+            SocketServer.SendAll(BitConverter.GetBytes((int)MessageIdentifier.StopAudio));
+
+            AudioFileReader reader = new AudioFileReader(fileName);
+
+            #region Send the Wave Format information
+            byte[] waveFormatBytes = WaveFormatHelper.ToBytes(reader.WaveFormat);
+            SocketServer.SendAll(ArrayHelpers.CombineArrays(BitConverter.GetBytes((int)MessageIdentifier.WaveFormatInformation),
+                                                            waveFormatBytes));
+            #endregion
+
+            #region Send Initial 4s of samples
+            int sampleBlockSize = reader.WaveFormat.GetBitrate() / 8; // The bitrate is the number of bits per second, so divide it by 8 to gets the bytes per second.
+
+            //
+            // Send ~4 seconds of audio to get started.
+            //
+            byte[] initialSamples = new byte[sampleBlockSize * 4];
+            reader.Read(initialSamples, 0, initialSamples.Length);
+
+            SocketServer.SendAll(ArrayHelpers.CombineArrays(BitConverter.GetBytes((int)MessageIdentifier.AudioSamples),
+                                                            initialSamples));
+            #endregion
+
+            #region Instruct clients to play in sync.
+            //
+            // Wait until we have the latency values for every client.
+            //
+            Pinger.HasResponseFromAll.WaitOne();
+
+            long highestLatency = Pinger.HighestPingClient / 2;
+
+            List<KeyValuePair<Socket, long>> remainingClientsToSendTo = new();
+            foreach (var pair in Pinger.PingStatistics)
             {
-                AudioFileReader reader = new AudioFileReader(fileName);
+                remainingClientsToSendTo.Add(pair);
+            }
 
-                // Send the Wave Format information
-                byte[] waveFormatBytes = WaveFormatHelper.ToBytes(reader.WaveFormat);
-                SocketServer.SendAll(ArrayHelpers.CombineArrays(BitConverter.GetBytes((int)MessageIdentifier.WaveFormatInformation),
-                                                                waveFormatBytes));
+            
+            // Give all clients 1 second to initialize their playback.
+            Thread.Sleep((int)highestLatency + 1000);
 
-                int sampleBlockSize = reader.WaveFormat.GetBitrate() / 8; // The bitrate is the number of bits per second, so divide it by 8 to gets the bytes per second.
+            Stopwatch watch = new Stopwatch();
+            watch.Start();
 
-                // Send ~4 seconds of audio to get started.
-                byte[] samples = new byte[sampleBlockSize * 4];
-                reader.Read(samples, 0, samples.Length);
-
-                SocketServer.SendAll(ArrayHelpers.CombineArrays(BitConverter.GetBytes((int)MessageIdentifier.AudioSamples),
-                                                                samples));
-
-                byte[] sampleBuffer = new byte[sampleBlockSize];
-                while (reader.Read(sampleBuffer, 0, sampleBlockSize) > 0)
+            while (remainingClientsToSendTo.Count > 0 && !_stopPlayback)
+            {
+                for (int i = 0; i < remainingClientsToSendTo.Count; i++)
                 {
-                    SocketServer.SendAll(ArrayHelpers.CombineArrays(BitConverter.GetBytes((int)MessageIdentifier.AudioSamples),
-                                                                    sampleBuffer));
-                    Thread.Sleep(990);
+                    long latency = remainingClientsToSendTo[i].Value / 2;
+
+                    //Debug.WriteLine($"Elapsed {watch.ElapsedMilliseconds} ms");
+
+                    if (watch.ElapsedMilliseconds >= highestLatency - latency)
+                    {
+                        // Inform the client that it should begin playing immediately.
+                        SocketServer.Send(BitConverter.GetBytes((int)MessageIdentifier.PlayAudio), remainingClientsToSendTo[i].Key);
+                        remainingClientsToSendTo.RemoveAt(i);
+                        i--;
+                    }
                 }
-            }).Start();
+            }
+
+            watch.Stop();
+
+            #endregion
+
+            #region Send Remaining Audio at 1 sample block per second.
+
+            byte[] sampleBuffer = new byte[sampleBlockSize];
+            while (reader.Read(sampleBuffer, 0, sampleBlockSize) > 0 && !_stopPlayback)
+            {
+                SocketServer.SendAll(ArrayHelpers.CombineArrays(BitConverter.GetBytes((int)MessageIdentifier.AudioSamples),
+                                                                sampleBuffer));
+
+                //Debug.WriteLine("Server: Sending samples" + DateTime.Now.ToLongTimeString());
+
+                Thread.Sleep(990);
+            }
+            #endregion
+
+            reader.Dispose();
+
+            SocketServer.SendAll(BitConverter.GetBytes((int)MessageIdentifier.StopAudio));
+
+            // Inform waiting threads that playback has stopped.
+            _stoppedPlayback.Set();
         }
 
         private void DataReceived(byte[] data, Socket client)

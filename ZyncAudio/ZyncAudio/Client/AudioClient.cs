@@ -29,8 +29,16 @@ namespace ZyncAudio
 
             _handlers.Add(MessageIdentifier.WaveFormatInformation, HandleWaveFormatInformation);
             _handlers.Add(MessageIdentifier.AudioSamples, HandleAudioSamples);
+            _handlers.Add(MessageIdentifier.PlayAudio, HandlePlayAudio);
+            _handlers.Add(MessageIdentifier.StopAudio, HandleStopAudio);
             _handlers.Add(MessageIdentifier.Request | MessageIdentifier.Ping, HandlePingRequest);
             _logger = logger;
+        }
+
+        public void Disconnect()
+        {
+            SocketClient.Disconnect();
+            HandleStopAudio(null);
         }
 
         private void DataReceived(byte[] data, Socket client)
@@ -49,6 +57,9 @@ namespace ZyncAudio
 
         private void HandlePingRequest(byte[] data)
         {
+            // Artifical lag
+            //Thread.Sleep(1500);
+
             SocketClient.Send(BitConverter.GetBytes((int)(MessageIdentifier.Response | MessageIdentifier.Ping)));
         }
 
@@ -59,6 +70,19 @@ namespace ZyncAudio
             _lastWaveFormatReceived = WaveFormatHelper.FromBytes(waveFormatBytes);
 
             _logger?.Log("Received Wave Format Information: " + _lastWaveFormatReceived.ToString());
+        }
+
+        private void HandlePlayAudio(byte[] _)
+        {
+            // Artifical lag
+            //Thread.Sleep(1500);
+
+            if (_waveOut == null)
+            {
+                throw new InvalidOperationException("Play Audio request received however the WaveOutEvent device has not been initialized.");
+            }
+
+            _waveOut.Play();
         }
 
         private void HandleAudioSamples(byte[] data)
@@ -76,15 +100,11 @@ namespace ZyncAudio
                 _bufferedWaveProvider = new BufferedWaveProvider(_lastWaveFormatReceived);
 
                 int sampleBlockSize = _lastWaveFormatReceived.GetBitrate() / 8;
+
                 // 30 second audio buffer.
                 _bufferedWaveProvider.BufferLength = sampleBlockSize * 30;
 
-                new Thread(() =>
-                {
-                    Thread.CurrentThread.Priority = ThreadPriority.Highest;
-                    _waveOut.Init(_bufferedWaveProvider);
-                    _waveOut.Play();
-                }).Start();
+                _waveOut.Init(_bufferedWaveProvider);
             }
 
             if (_bufferedWaveProvider == null)
@@ -97,6 +117,16 @@ namespace ZyncAudio
 
             _bufferedWaveProvider.AddSamples(samples, 0, samples.Length);
             _logger?.Log($"New samples added, {Math.Round(samples.Length / 1000f / 1000f, 3)} megabytes. Bufferred: {_bufferedWaveProvider.BufferedBytes} bytes ({_bufferedWaveProvider.BufferedDuration} seconds).");
+        }
+
+        private void HandleStopAudio(byte[]? _)
+        {
+            _waveOut?.Stop();
+            _waveOut?.Dispose();
+            _waveOut = null;
+            _bufferedWaveProvider?.ClearBuffer();
+            _bufferedWaveProvider = null;
+            _lastWaveFormatReceived = null;
         }
 
         private void SocketError(SocketException exception, Socket client)
