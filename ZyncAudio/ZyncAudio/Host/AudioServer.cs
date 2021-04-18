@@ -45,53 +45,39 @@ namespace ZyncAudio
         /// <summary>
         /// Used to ensure Play and Stop are not able to be executed at the same time.
         /// </summary>
-        private object _playOrStopLockObject = new();
+        private readonly object _playOrStopLockObject = new();
 
-        public bool Play(string fileName)
+        public async Task PlayQueue(Queue<string> playQueue, CancellationToken cancellationToken)
+        {
+            while (playQueue.Count > 0)
+            {
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    return;
+                }
+
+                await Play(playQueue.Dequeue(), cancellationToken);
+            }
+        }
+
+        private Task Play(string fileName, CancellationToken cancellationToken)
         {
             lock (_playOrStopLockObject)
             {
-                if (_playbackState != PlaybackState.Stopped)
+                if (_playbackState == PlaybackState.Playing)
                 {
-                    return false;
+                    return Task.FromResult(false);
                 }
 
                 _playbackState = PlaybackState.Playing;
 
-                Task.Run(() => { PlaySong(fileName); });
-                return true;
+                var tcs = new TaskCompletionSource();
+                Task.Run(() => { PlaySong(fileName, tcs, cancellationToken); }, cancellationToken);
+                return tcs.Task;
             }
         }
 
-        private volatile bool _stopPlayback = false;
-        private readonly ManualResetEvent _stoppedPlayback = new ManualResetEvent(false);
-
-        public bool Stop()
-        {
-            lock (_playOrStopLockObject)
-            {
-                if (_playbackState != PlaybackState.Playing)
-                {
-                    return false;
-                }
-
-                _stoppedPlayback.Reset();
-
-                // Inform the player that we wish to stop.
-                _stopPlayback = true;
-
-                // Wait for the sample distributor to respond.
-                _stoppedPlayback.WaitOne();
-
-                // Reset state to stopped.
-                _stopPlayback = false;
-                _playbackState = PlaybackState.Stopped;
-
-                return true;
-            }
-        }
-
-        private void PlaySong(string fileName)
+        private void PlaySong(string fileName, TaskCompletionSource tcs, CancellationToken cancellationToken)
         {
             // Inform all clients to stop any audio they might be playing.
             SocketServer.SendAll(BitConverter.GetBytes((int)MessageIdentifier.StopAudio));
@@ -131,14 +117,14 @@ namespace ZyncAudio
                 remainingClientsToSendTo.Add(pair);
             }
 
-            
+
             // Give all clients 1 second to initialize their playback.
             Thread.Sleep((int)highestLatency + 1000);
 
             Stopwatch watch = new Stopwatch();
             watch.Start();
 
-            while (remainingClientsToSendTo.Count > 0 && !_stopPlayback)
+            while (remainingClientsToSendTo.Count > 0 && !_stopPlayback && !cancellationToken.IsCancellationRequested)
             {
                 for (int i = 0; i < remainingClientsToSendTo.Count; i++)
                 {
@@ -163,7 +149,7 @@ namespace ZyncAudio
             #region Send Remaining Audio at 1 sample block per second.
 
             byte[] sampleBuffer = new byte[sampleBlockSize];
-            while (reader.Read(sampleBuffer, 0, sampleBlockSize) > 0 && !_stopPlayback)
+            while (reader.Read(sampleBuffer, 0, sampleBlockSize) > 0 && !_stopPlayback && !cancellationToken.IsCancellationRequested)
             {
                 SocketServer.SendAll(ArrayHelpers.CombineArrays(BitConverter.GetBytes((int)MessageIdentifier.AudioSamples),
                                                                 sampleBuffer));
@@ -180,6 +166,43 @@ namespace ZyncAudio
 
             // Inform waiting threads that playback has stopped.
             _stoppedPlayback.Set();
+
+            if (cancellationToken.IsCancellationRequested)
+            {
+                tcs.TrySetCanceled(cancellationToken);
+            }
+            else
+            {
+                tcs.TrySetResult();
+            }
+        }
+
+        private volatile bool _stopPlayback = false;
+        private readonly ManualResetEvent _stoppedPlayback = new ManualResetEvent(false);
+
+        public bool Stop()
+        {
+            lock (_playOrStopLockObject)
+            {
+                if (_playbackState != PlaybackState.Playing)
+                {
+                    return false;
+                }
+
+                _stoppedPlayback.Reset();
+
+                // Inform the player that we wish to stop.
+                _stopPlayback = true;
+
+                // Wait for the sample distributor to respond.
+                _stoppedPlayback.WaitOne();
+
+                // Reset state to stopped.
+                _stopPlayback = false;
+                _playbackState = PlaybackState.Stopped;
+
+                return true;
+            }
         }
 
         private void DataReceived(byte[] data, Socket client)
