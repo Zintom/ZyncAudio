@@ -105,6 +105,8 @@ namespace ZyncAudio
 
                 Clients.Add(client);
 
+                // Nagle Algorithm could cause the sync to be slightly off.
+                client.NoDelay = true;
                 client.BeginReceiveLengthPrefixed(
                     true,
                     (d, s) => { DataReceived?.Invoke(d, s); },

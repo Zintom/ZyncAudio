@@ -94,6 +94,9 @@ namespace ZyncAudio
                     return;
                 }
 
+                // Nagle Algorithm could cause the sync to be slightly off.
+                _workerSocket.NoDelay = true;
+
                 // Begin receive loop
                 _workerSocket.BeginReceiveLengthPrefixed(true, DataReceived, SocketError);
             }
