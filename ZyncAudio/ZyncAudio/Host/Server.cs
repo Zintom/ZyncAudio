@@ -4,7 +4,7 @@ using System.Net;
 using System.Net.Sockets;
 using ZyncAudio.Extensions;
 
-namespace ZyncAudio
+namespace ZyncAudio.Host
 {
     public interface ISocketServer
     {

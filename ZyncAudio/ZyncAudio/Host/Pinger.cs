@@ -7,7 +7,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace ZyncAudio
+namespace ZyncAudio.Host
 {
     public class Pinger
     {
