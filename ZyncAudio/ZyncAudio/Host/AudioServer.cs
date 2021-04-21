@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 using Zintom.Parcelize.Helpers;
 using ZyncAudio.Extensions;
 
-namespace ZyncAudio
+namespace ZyncAudio.Host
 {
     enum PlaybackState
     {
@@ -47,20 +47,21 @@ namespace ZyncAudio
         /// </summary>
         private readonly object _playOrStopLockObject = new();
 
-        public async Task PlayQueue(Queue<string> playQueue, CancellationToken cancellationToken)
-        {
-            while (playQueue.Count > 0)
-            {
-                if (cancellationToken.IsCancellationRequested)
-                {
-                    return;
-                }
+        private Playlist? _currentPlayList;
 
-                await Play(playQueue.Dequeue(), cancellationToken);
+        public async void PlayListAsync(Playlist playlist)
+        {
+            _currentPlayList = playlist;
+
+            string? currentTrack;
+            while ((currentTrack = _currentPlayList.Current) != null)
+            {
+                await PlayAsync(currentTrack).ConfigureAwait(false);
+                _currentPlayList.MoveNext();
             }
         }
 
-        private Task Play(string fileName, CancellationToken cancellationToken)
+        private Task PlayAsync(string fileName)
         {
             lock (_playOrStopLockObject)
             {
@@ -72,21 +73,22 @@ namespace ZyncAudio
                 _playbackState = PlaybackState.Playing;
 
                 var tcs = new TaskCompletionSource();
-                Task.Run(() => { PlaySong(fileName, tcs, cancellationToken); }, cancellationToken);
+                ThreadPool.QueueUserWorkItem((_) => { PlaySong(fileName, tcs); });
+                //Task.Run(() => { PlaySong(fileName, tcs); }).ConfigureAwait(false);
                 return tcs.Task;
             }
         }
 
-        private void PlaySong(string fileName, TaskCompletionSource tcs, CancellationToken cancellationToken)
+        private void PlaySong(string fileName, TaskCompletionSource tcs)
         {
             // Inform all clients to stop any audio they might be playing.
-            SocketServer.SendAll(BitConverter.GetBytes((int)MessageIdentifier.StopAudio));
+            SocketServer.SendAll(BitConverter.GetBytes((int)(MessageIdentifier.StopAudio | MessageIdentifier.AudioProcessing)));
 
             AudioFileReader reader = new AudioFileReader(fileName);
 
             #region Send the Wave Format information
             byte[] waveFormatBytes = WaveFormatHelper.ToBytes(reader.WaveFormat);
-            SocketServer.SendAll(ArrayHelpers.CombineArrays(BitConverter.GetBytes((int)MessageIdentifier.WaveFormatInformation),
+            SocketServer.SendAll(ArrayHelpers.CombineArrays(BitConverter.GetBytes((int)(MessageIdentifier.WaveFormatInformation | MessageIdentifier.AudioProcessing)),
                                                             waveFormatBytes));
             #endregion
 
@@ -99,7 +101,7 @@ namespace ZyncAudio
             byte[] initialSamples = new byte[sampleBlockSize * 4];
             reader.Read(initialSamples, 0, initialSamples.Length);
 
-            SocketServer.SendAll(ArrayHelpers.CombineArrays(BitConverter.GetBytes((int)MessageIdentifier.AudioSamples),
+            SocketServer.SendAll(ArrayHelpers.CombineArrays(BitConverter.GetBytes((int)(MessageIdentifier.AudioSamples | MessageIdentifier.AudioProcessing)),
                                                             initialSamples));
             #endregion
 
@@ -117,14 +119,13 @@ namespace ZyncAudio
                 remainingClientsToSendTo.Add(pair);
             }
 
-
             // Give all clients 1 second to initialize their playback.
-            Thread.Sleep((int)highestLatency + 1000);
+            Thread.Sleep((int)highestLatency + 2000);
 
             Stopwatch watch = new Stopwatch();
             watch.Start();
 
-            while (remainingClientsToSendTo.Count > 0 && !_stopPlayback && !cancellationToken.IsCancellationRequested)
+            while (remainingClientsToSendTo.Count > 0 && !_stopPlayback)
             {
                 for (int i = 0; i < remainingClientsToSendTo.Count; i++)
                 {
@@ -135,7 +136,9 @@ namespace ZyncAudio
                     if (watch.ElapsedMilliseconds >= highestLatency - latency)
                     {
                         // Inform the client that it should begin playing immediately.
-                        SocketServer.Send(BitConverter.GetBytes((int)MessageIdentifier.PlayAudio), remainingClientsToSendTo[i].Key);
+                        SocketServer.Send(BitConverter.GetBytes((int)(MessageIdentifier.PlayAudio |
+                                                                      MessageIdentifier.AudioProcessing | 
+                                                                      MessageIdentifier.ProcessImmediately)), remainingClientsToSendTo[i].Key);
                         remainingClientsToSendTo.RemoveAt(i);
                         i--;
                     }
@@ -146,12 +149,14 @@ namespace ZyncAudio
 
             #endregion
 
+            Thread.Sleep(250);
+
             #region Send Remaining Audio at 1 sample block per second.
 
             byte[] sampleBuffer = new byte[sampleBlockSize];
-            while (reader.Read(sampleBuffer, 0, sampleBlockSize) > 0 && !_stopPlayback && !cancellationToken.IsCancellationRequested)
+            while (reader.Read(sampleBuffer, 0, sampleBlockSize) > 0 && !_stopPlayback)
             {
-                SocketServer.SendAll(ArrayHelpers.CombineArrays(BitConverter.GetBytes((int)MessageIdentifier.AudioSamples),
+                SocketServer.SendAll(ArrayHelpers.CombineArrays(BitConverter.GetBytes((int)(MessageIdentifier.AudioSamples | MessageIdentifier.AudioProcessing)),
                                                                 sampleBuffer));
 
                 //Debug.WriteLine("Server: Sending samples" + DateTime.Now.ToLongTimeString());
@@ -162,25 +167,30 @@ namespace ZyncAudio
 
             reader.Dispose();
 
-            SocketServer.SendAll(BitConverter.GetBytes((int)MessageIdentifier.StopAudio));
+            if (!_stopPlayback)
+            {
+                // Wait for clients to run out of samples
+                Thread.Sleep(4000);
+            }
+
+            SocketServer.SendAll(BitConverter.GetBytes((int)(MessageIdentifier.StopAudio | MessageIdentifier.AudioProcessing)));
 
             // Inform waiting threads that playback has stopped.
             _stoppedPlayback.Set();
+            // Reset state to stopped.
+            _stopPlayback = false;
+            _playbackState = PlaybackState.Stopped;
 
-            if (cancellationToken.IsCancellationRequested)
-            {
-                tcs.TrySetCanceled(cancellationToken);
-            }
-            else
-            {
-                tcs.TrySetResult();
-            }
+            tcs.TrySetResult();
         }
 
         private volatile bool _stopPlayback = false;
         private readonly ManualResetEvent _stoppedPlayback = new ManualResetEvent(false);
 
-        public bool Stop()
+        /// <summary>
+        /// Stops playback of the current track and depending on the <see cref="Playlist.PlayingMode"/>, another song may start playing.
+        /// </summary>
+        public bool Next()
         {
             lock (_playOrStopLockObject)
             {
@@ -196,10 +206,6 @@ namespace ZyncAudio
 
                 // Wait for the sample distributor to respond.
                 _stoppedPlayback.WaitOne();
-
-                // Reset state to stopped.
-                _stopPlayback = false;
-                _playbackState = PlaybackState.Stopped;
 
                 return true;
             }
