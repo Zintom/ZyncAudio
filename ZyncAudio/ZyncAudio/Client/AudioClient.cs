@@ -4,33 +4,71 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Net.Sockets;
 using System.Threading;
+using System.Threading.Tasks;
 using ZyncAudio.Extensions;
+using static ZyncAudio.WorkPump;
 
 namespace ZyncAudio
 {
     public class AudioClient
     {
 
+        private class GenericWork : IWorkItem
+        {
+
+            private readonly Action<byte[]> _method;
+            private readonly byte[] _argumentData;
+
+            public GenericWork(Action<byte[]> method, byte[] argumentData)
+            {
+                _method = method;
+                _argumentData = argumentData;
+            }
+
+            public void Invoke()
+            {
+                _method.Invoke(_argumentData);
+            }
+        }
+
         public ISocketClient SocketClient { get; private set; }
 
-        private Dictionary<MessageIdentifier, Action<byte[]>> _handlers = new();
+        private readonly Dictionary<MessageIdentifier, Action<byte[]>> _handlers = new();
+
+        private readonly WorkPump _lowPriorityWorkPump;
+        private readonly WorkPump _highPriorityWorkPump;
 
         private WaveFormat? _lastWaveFormatReceived;
         private BufferedWaveProvider? _bufferedWaveProvider;
         private WaveOutEvent? _waveOut;
 
-        private ILogger? _logger;
+        private readonly ILogger? _logger;
 
         public AudioClient(ISocketClient socketClient, ILogger? logger)
         {
+            _lowPriorityWorkPump = new();
+            _lowPriorityWorkPump.Run(ThreadPriority.Lowest, "Low Priority Work Pump");
+
+            _highPriorityWorkPump = new();
+            _highPriorityWorkPump.Run(ThreadPriority.AboveNormal, "High Priority Work Pump");
+
             SocketClient = socketClient;
             SocketClient.DataReceived = DataReceived;
             SocketClient.SocketError = SocketError;
 
-            _handlers.Add(MessageIdentifier.WaveFormatInformation, HandleWaveFormatInformation);
-            _handlers.Add(MessageIdentifier.AudioSamples, HandleAudioSamples);
-            _handlers.Add(MessageIdentifier.PlayAudio, HandlePlayAudio);
-            _handlers.Add(MessageIdentifier.StopAudio, HandleStopAudio);
+            _handlers.Add(MessageIdentifier.WaveFormatInformation| 
+                          MessageIdentifier.AudioProcessing, HandleWaveFormatInformation);
+
+            _handlers.Add(MessageIdentifier.AudioSamples |
+                          MessageIdentifier.AudioProcessing, HandleAudioSamples);
+
+            _handlers.Add(MessageIdentifier.PlayAudio | 
+                          MessageIdentifier.AudioProcessing |
+                          MessageIdentifier.ProcessImmediately, HandlePlayAudio);
+
+            _handlers.Add(MessageIdentifier.StopAudio |
+                          MessageIdentifier.AudioProcessing, HandleStopAudio);
+
             _handlers.Add(MessageIdentifier.Request | MessageIdentifier.Ping, HandlePingRequest);
             _logger = logger;
         }
@@ -47,19 +85,28 @@ namespace ZyncAudio
 
             if (_handlers.TryGetValue(messageIdentifier, out Action<byte[]>? handler))
             {
-                handler.Invoke(data);
+                if (messageIdentifier.HasFlag(MessageIdentifier.AudioProcessing) &&
+                    !messageIdentifier.HasFlag(MessageIdentifier.ProcessImmediately))
+                {
+                    // Audio Processing requests go into a separate low priority queue(apart from those flagged as ProcessImmediately)
+                    // as Audio Processing can clog the message pump as it may take from 10-200 ms to complete.
+                    // We need as little latency as possible when responding to Ping and Play messages so naturally audio work
+                    // is delegated to a lower priority thread.
+                    _lowPriorityWorkPump.Add(new GenericWork(handler, data));
+                }
+                else
+                {
+                    _highPriorityWorkPump.Add(new GenericWork(handler, data));
+                }
             }
             else
             {
-                throw new NotImplementedException();
+                throw new NotImplementedException($"There is no handler for the message {messageIdentifier}.");
             }
         }
 
         private void HandlePingRequest(byte[] data)
         {
-            // Artifical lag
-            //Thread.Sleep(1500);
-
             SocketClient.Send(BitConverter.GetBytes((int)(MessageIdentifier.Response | MessageIdentifier.Ping)));
         }
 
@@ -70,19 +117,6 @@ namespace ZyncAudio
             _lastWaveFormatReceived = WaveFormatHelper.FromBytes(waveFormatBytes);
 
             _logger?.Log("Received Wave Format Information: " + _lastWaveFormatReceived.ToString());
-        }
-
-        private void HandlePlayAudio(byte[] _)
-        {
-            // Artifical lag
-            //Thread.Sleep(1500);
-
-            if (_waveOut == null)
-            {
-                throw new InvalidOperationException("Play Audio request received however the WaveOutEvent device has not been initialized.");
-            }
-
-            _waveOut.Play();
         }
 
         private void HandleAudioSamples(byte[] data)
@@ -117,6 +151,16 @@ namespace ZyncAudio
 
             _bufferedWaveProvider.AddSamples(samples, 0, samples.Length);
             _logger?.Log($"New samples added, {Math.Round(samples.Length / 1000f / 1000f, 3)} megabytes. Bufferred: {_bufferedWaveProvider.BufferedBytes} bytes ({_bufferedWaveProvider.BufferedDuration} seconds).");
+        }
+
+        private void HandlePlayAudio(byte[] _)
+        {
+            if (_waveOut == null)
+            {
+                throw new InvalidOperationException("Play Audio request received however the WaveOutEvent device has not been initialized.");
+            }
+
+            _waveOut.Play();
         }
 
         private void HandleStopAudio(byte[]? _)
