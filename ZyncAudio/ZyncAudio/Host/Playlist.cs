@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Threading;
 
 namespace ZyncAudio.Host
@@ -37,7 +38,7 @@ namespace ZyncAudio.Host
             get => _mode;
             set
             {
-                if(value != PlayingMode.Pause)
+                if (value != PlayingMode.Pause)
                 {
                     _waitForUnpause.Set();
                 }
@@ -46,20 +47,15 @@ namespace ZyncAudio.Host
             }
         }
 
-        private int _position = 0;
         /// <summary>
         /// The index of the current track in the playlist.
         /// </summary>
-        public int Position
-        {
-            get => _position;
-            set
-            {
-                if (value < 0 || value >= _trackFilePaths.Count) { return; }
+        public int Position { get; set; } = -1;
 
-                _position = value;
-            }
-        }
+        /// <summary>
+        /// Triggered when the position is changed by one of the <c>Move</c> methods.
+        /// </summary>
+        public event Action? PositionChanged;
 
         private readonly ManualResetEvent _waitForUnpause = new(false);
 
@@ -72,12 +68,14 @@ namespace ZyncAudio.Host
         {
             get
             {
-                if (_position < 0 || _position >= _trackFilePaths.Count)
+                if (Position < 0 || Position >= _trackFilePaths.Count)
                     return null;
 
-                return _trackFilePaths[_position];
+                return _trackFilePaths[Position];
             }
         }
+
+        public int Size { get => _trackFilePaths.Count; }
 
         /// <summary>
         /// Add's the given <paramref name="trackFilePath"/> to the playlist.
@@ -87,24 +85,36 @@ namespace ZyncAudio.Host
             _trackFilePaths.Add(trackFilePath);
         }
 
+        public void Clear()
+        {
+            Position = -1;
+            _trackFilePaths.Clear();
+            Mode = PlayingMode.Stop;
+        }
+
         /// <summary>
         /// Almost identical to <c>MoveNext()</c> however moves backwards.
         /// </summary>
+        /// <param name="positions">If in <see cref="PlayingMode.LoopAll"/>, how many track positions should we jump backward.</param>
         /// <remarks>Behaviour depends on the current <see cref="PlayingMode"/>. <b>Can block if Mode equals</b> <see cref="PlayingMode.Pause"/></remarks>
         /// <returns>Whether we have come to the end of the enumeration.</returns>
-        public bool MovePrevious()
+        public bool MovePrevious(int positions = 1)
         {
             switch (Mode)
             {
                 case PlayingMode.LoopAll:
-                    if (_position - 1 < 0)
+                    for (int i = 0; i < positions; i++)
                     {
-                        _position = _trackFilePaths.Count - 1;
+                        if (Position - 1 < 0)
+                        {
+                            Position = _trackFilePaths.Count - 1;
+                        }
+                        else
+                        {
+                            Position--;
+                        }
                     }
-                    else
-                    {
-                        _position--;
-                    }
+                    PositionChanged?.Invoke();
                     break;
                 case PlayingMode.LoopSingle:
                     break;
@@ -112,7 +122,8 @@ namespace ZyncAudio.Host
                     _waitForUnpause.WaitOne();
                     break;
                 case PlayingMode.Stop:
-                    _position = -1;
+                    Position = -1;
+                    PositionChanged?.Invoke();
                     return false;
             }
 
@@ -122,21 +133,26 @@ namespace ZyncAudio.Host
         /// <summary>
         /// Moves to the next item in the track-list.
         /// </summary>
+        /// <param name="positions">If in <see cref="PlayingMode.LoopAll"/>, how many track positions should we jump forward.</param>
         /// <remarks>Behaviour depends on the current <see cref="PlayingMode"/>. <b>Can block if Mode equals</b> <see cref="PlayingMode.Pause"/></remarks>
         /// <returns>Whether we have come to the end of the enumeration.</returns>
-        public bool MoveNext()
+        public bool MoveNext(int positions = 1)
         {
             switch (Mode)
             {
                 case PlayingMode.LoopAll:
-                    if (_position + 1 >= _trackFilePaths.Count)
+                    for (int i = 0; i < positions; i++)
                     {
-                        _position = 0;
+                        if (Position + 1 >= _trackFilePaths.Count)
+                        {
+                            Position = 0;
+                        }
+                        else
+                        {
+                            Position++;
+                        }
                     }
-                    else
-                    {
-                        _position++;
-                    }
+                    PositionChanged?.Invoke();
                     break;
                 case PlayingMode.LoopSingle:
                     break;
@@ -144,7 +160,8 @@ namespace ZyncAudio.Host
                     _waitForUnpause.WaitOne();
                     break;
                 case PlayingMode.Stop:
-                    _position = -1;
+                    Position = -1;
+                    PositionChanged?.Invoke();
                     return false;
             }
 
