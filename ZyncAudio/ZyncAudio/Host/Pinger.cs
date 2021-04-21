@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Net;
+using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
@@ -30,11 +32,11 @@ namespace ZyncAudio.Host
             get
             {
                 long highestPing = 0;
-                foreach (var latency in PingStatistics)
+                foreach (var ping in PingStatistics)
                 {
-                    if (latency.Value > highestPing)
+                    if (ping.Value > highestPing)
                     {
-                        highestPing = latency.Value;
+                        highestPing = ping.Value;
                     }
                 }
                 return highestPing;
@@ -54,7 +56,7 @@ namespace ZyncAudio.Host
             HasResponseFromAll.Reset();
 
             _running = true;
-            Task.Run(PingClients);
+            ThreadPool.QueueUserWorkItem(PingClients);
         }
 
         /// <summary>
@@ -85,7 +87,7 @@ namespace ZyncAudio.Host
         /// <summary>
         /// Pings clients periodically to get their latency times.
         /// </summary>
-        private async Task PingClients()
+        private async void PingClients(object? _)
         {
             while (_running)
             {
@@ -109,7 +111,7 @@ namespace ZyncAudio.Host
                     _socketServer.Send(BitConverter.GetBytes((int)(MessageIdentifier.Request | MessageIdentifier.Ping)), client);
                 }
 
-                await Task.Delay(1000);
+                await Task.Delay(1000).ConfigureAwait(false);
             }
         }
 
