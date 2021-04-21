@@ -1,16 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
 using System.Diagnostics;
-using System.Drawing;
 using System.IO;
-using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
+using ZyncAudio.Host;
 using System.Windows.Forms;
 
 namespace ZyncAudio
@@ -23,9 +17,7 @@ namespace ZyncAudio
 
         private ILogger _logger;
 
-        private CancellationTokenSource? _cancelPlaybackSource;
-
-        private Queue<string> _playingQueue = new();
+        private readonly Playlist _playlist = new();
 
         public HostForm()
         {
@@ -45,6 +37,8 @@ namespace ZyncAudio
             _server.Open(IPAddress.Any, 60759);
             _server.ClientConnected = ClientConnected;
             _server.ClientDisconnected = ClientDisconnected;
+
+            _playlist.PositionChanged += RefreshNowPlaying;
         }
 
         private void ClientConnected(Socket client)
@@ -78,19 +72,32 @@ namespace ZyncAudio
 
         }
 
-        private async void PlayBtn_Click(object sender, EventArgs e)
+        private void PlayBtn_Click(object sender, EventArgs e)
         {
-            //_audioServer.Play(@"D:\All Files\Music\04. Mike Ault - Flying Forever (feat. Morgan Perry).flac");
+            EnsureServerIsPlaying();
+            RefreshNowPlaying();
+        }
 
-            _cancelPlaybackSource?.Cancel();
-            _cancelPlaybackSource = new CancellationTokenSource();
-            await _audioServer.PlayQueue(_playingQueue, _cancelPlaybackSource.Token);
+        private void EnsureServerIsPlaying()
+        {
+            if(_playlist.Size == 0) { return; }
+
+            Playlist.PlayingMode playingMode = _playlist.Mode;
+            _playlist.Mode = Playlist.PlayingMode.LoopAll;
+
+            if (playingMode == Playlist.PlayingMode.Stop)
+            {
+                _playlist.MoveNext();
+                _audioServer.PlayListAsync(_playlist);
+            }
         }
 
         private void StopBtn_Click(object sender, EventArgs e)
         {
-            _audioServer.Stop();
-            _cancelPlaybackSource?.Cancel();
+            _playlist.Mode = Playlist.PlayingMode.Stop;
+            _audioServer.Next();
+
+            RefreshNowPlaying();
         }
 
         private void CloseEntryBtn_Click(object sender, EventArgs e)
@@ -99,7 +106,12 @@ namespace ZyncAudio
             CloseEntryBtn.Enabled = false;
 
             PlayBtn.Enabled = true;
+            NextBtn.Enabled = true;
+            PreviousBtn.Enabled = true;
             StopBtn.Enabled = true;
+            PlayQueue.Enabled = true;
+            LoadFolderBtn.Enabled = true;
+            UnloadItems.Enabled = true;
         }
 
         private void PingChecker_Tick(object sender, EventArgs e)
@@ -121,7 +133,7 @@ namespace ZyncAudio
 
         private void HostForm_FormClosing(object sender, FormClosingEventArgs e)
         {
-            _audioServer.Stop();
+            _audioServer.Next();
             _server.Close();
         }
 
@@ -140,11 +152,50 @@ namespace ZyncAudio
                         || file.EndsWith(".mp3")
                         || file.EndsWith(".flac"))
                     {
-                        _playingQueue.Enqueue(file);
+                        _playlist.Add(file);
                         PlayQueue.Items.Add(new FileInfo(file).Name);
                     }
                 }
             }
+        }
+
+        private void UnloadItems_Click(object sender, EventArgs e)
+        {
+            _playlist.Clear();
+            PlayQueue.Items.Clear();
+        }
+
+        private void NextBtn_Click(object sender, EventArgs e)
+        {
+            EnsureServerIsPlaying();
+            _audioServer.Next();
+        }
+
+        private void PreviousBtn_Click(object sender, EventArgs e)
+        {
+            EnsureServerIsPlaying();
+
+            // Next will push the playlist forward once so we have to move back twice.
+            _playlist.MovePrevious(2);
+            _audioServer.Next();
+        }
+
+        private void RefreshNowPlaying()
+        {
+            PlayQueue.Invoke(new Action(() =>
+            {
+                if (_playlist.Position < 0 || _playlist.Position >= PlayQueue.Items.Count) { return; }
+                PlayQueue.SelectedIndex = _playlist.Position;
+            }));
+        }
+
+        private void PlayQueue_MouseDown(object sender, MouseEventArgs e)
+        {
+            EnsureServerIsPlaying();
+
+            _playlist.Position = PlayQueue.SelectedIndex;
+            _playlist.MovePrevious();
+            _audioServer.Next();
         }
     }
 
