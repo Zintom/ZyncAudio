@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Net.Sockets;
 using System.Text;
@@ -89,7 +90,7 @@ namespace ZyncAudio.Extensions
             }
             catch (ObjectDisposedException e)
             {
-
+                Debug.WriteLine(e.Message);
             }
         }
 
@@ -125,12 +126,13 @@ namespace ZyncAudio.Extensions
             }
             catch (ObjectDisposedException e)
             {
-
+                Debug.WriteLine(e.Message);
             }
         }
 
         private class StateObject
         {
+#pragma warning disable IDE1006 // Naming Styles
             /// <summary>
             /// Whether we should begin receiving after a sucessful receive (continuously).
             /// </summary>
@@ -150,6 +152,7 @@ namespace ZyncAudio.Extensions
                 SocketExceptionThrown = socketExceptionThrown;
                 DataReceiveComplete = dataReceiveCompleteDelegate;
             }
+#pragma warning restore IDE1006 // Naming Styles
         }
     }
 }
