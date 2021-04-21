@@ -19,6 +19,8 @@ namespace ZyncAudio
 
         ILogger _logger;
 
+        HostForm? _host;
+
         public ClientForm()
         {
             InitializeComponent();
@@ -35,8 +37,22 @@ namespace ZyncAudio
 
         private void HostButton_Click(object sender, EventArgs e)
         {
-            HostForm host = new HostForm();
-            host.Show();
+            HostBtn.Enabled = false;
+
+            _host = new HostForm();
+            _host.Show();
+
+            LinkForms();
+        }
+
+        private void ClientForm_Activated(object sender, EventArgs e)
+        {
+
+        }
+
+        private void ClientForm_LocationChanged(object sender, EventArgs e)
+        {
+            LinkForms();
         }
 
         public void HandleSocketError(SocketException e, Socket _)
@@ -62,6 +78,14 @@ namespace ZyncAudio
                     _connectToggle = !_connectToggle;
                     ConnectBtn.Text = "Disconnect";
                 }
+            }
+        }
+
+        public void LinkForms()
+        {
+            if (_host != null)
+            {
+                _host.Location = new Point(Left - _host.Width, Location.Y);
             }
         }
     }

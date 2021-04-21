@@ -66,7 +66,7 @@ namespace ZyncAudio
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(800, 325);
+            this.ClientSize = new System.Drawing.Size(344, 321);
             this.Controls.Add(this.IPAddressInputBox);
             this.Controls.Add(this.ConnectBtn);
             this.Controls.Add(this.HostBtn);
@@ -74,7 +74,9 @@ namespace ZyncAudio
             this.ShowIcon = false;
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Zync Audio Client";
+            this.Activated += new System.EventHandler(this.ClientForm_Activated);
             this.Load += new System.EventHandler(this.ClientForm_Load);
+            this.LocationChanged += new System.EventHandler(this.ClientForm_LocationChanged);
             this.ResumeLayout(false);
             this.PerformLayout();
 
