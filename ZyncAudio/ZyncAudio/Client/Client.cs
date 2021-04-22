@@ -52,7 +52,7 @@ namespace ZyncAudio
 
         public Action<SocketException, Socket>? SocketError { get; set; }
 
-        private object _stateChangeLockObject = new();
+        private readonly object _stateChangeLockObject = new();
 
         private ConnectionState _connectionState = ConnectionState.Disconnected;
 
