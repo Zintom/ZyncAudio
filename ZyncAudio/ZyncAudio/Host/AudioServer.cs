@@ -56,14 +56,18 @@ namespace ZyncAudio.Host
 
             lock (_playOrStopLockObject)
             {
-                if (_playbackState == PlaybackState.Playing)
+                if (_playbackState != PlaybackState.Stopped)
                 {
                     return false;
                 }
 
                 _playbackState = PlaybackState.Playing;
 
-                ThreadPool.QueueUserWorkItem((_) => { PlaySong(fileName); });
+                //ThreadPool.QueueUserWorkItem((_) => { PlaySong(fileName); });
+                new Thread(() => PlaySong(fileName))
+                {
+                    Priority = ThreadPriority.AboveNormal
+                }.Start();
                 return true;
             }
         }
@@ -75,7 +79,15 @@ namespace ZyncAudio.Host
             // Inform all clients to stop any audio they might be playing.
             SocketServer.SendAll(BitConverter.GetBytes((int)(MessageIdentifier.StopAudio | MessageIdentifier.AudioProcessing)));
 
-            var reader = new AudioFileReader(fileName);
+            AudioFileReader reader;
+            try
+            {
+                reader = new AudioFileReader(fileName);
+            }
+            catch (FormatException)
+            {
+                goto stopAudio;
+            }
 
             #region Send the Wave Format information
             byte[] waveFormatBytes = WaveFormatHelper.ToBytes(reader.WaveFormat);
@@ -149,18 +161,16 @@ namespace ZyncAudio.Host
             #region Send Remaining Audio at 1 sample block per second.
 
             byte[] sampleBuffer = new byte[sampleBlockSize];
-            while (reader.Read(sampleBuffer, 0, sampleBlockSize) > 0 && !_stopPlayback)
+            int bytesRead;
+            while ((bytesRead = reader.Read(sampleBuffer, 0, sampleBlockSize)) > 0 && !_stopPlayback)
             {
                 SocketServer.SendAll(ArrayHelpers.CombineArrays(BitConverter.GetBytes((int)(MessageIdentifier.AudioSamples | MessageIdentifier.AudioProcessing)),
                                                                 sampleBuffer));
 
-                //Debug.WriteLine("Server: Sending samples" + DateTime.Now.ToLongTimeString());
-
-                Thread.Sleep(1000);
+                Thread.Sleep(990);
             }
-            #endregion
 
-            reader.Dispose();
+            #endregion
 
             if (!_stopPlayback)
             {
@@ -170,6 +180,10 @@ namespace ZyncAudio.Host
                     Thread.Sleep(250);
                 }
             }
+
+            reader.Dispose();
+
+        stopAudio:
 
             SocketServer.SendAll(BitConverter.GetBytes((int)(MessageIdentifier.StopAudio | MessageIdentifier.AudioProcessing)));
 
