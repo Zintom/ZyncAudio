@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Threading;
+using ZyncAudio.Extensions;
 
 namespace ZyncAudio.Host
 {
@@ -45,7 +45,7 @@ namespace ZyncAudio.Host
             }
         }
 
-        public int Size { get => _trackFilePaths.Count; }
+        public int TrackListSize { get => _trackFilePaths.Count; }
 
         /// <summary>
         /// Add's the given <paramref name="trackFilePath"/> to the playlist.
@@ -72,17 +72,8 @@ namespace ZyncAudio.Host
             switch (Mode)
             {
                 case PlayingMode.LoopAll:
-                    for (int i = 0; i < positions; i++)
-                    {
-                        if (Position - 1 < 0)
-                        {
-                            Position = _trackFilePaths.Count - 1;
-                        }
-                        else
-                        {
-                            Position--;
-                        }
-                    }
+                    // We use Modulo to ensure the position lies within the bounds of the track list.
+                    Position = (Position - positions).Mod(TrackListSize);
                     break;
                 case PlayingMode.LoopSingle:
                     break;
@@ -102,17 +93,8 @@ namespace ZyncAudio.Host
             switch (Mode)
             {
                 case PlayingMode.LoopAll:
-                    for (int i = 0; i < positions; i++)
-                    {
-                        if (Position + 1 >= _trackFilePaths.Count)
-                        {
-                            Position = 0;
-                        }
-                        else
-                        {
-                            Position++;
-                        }
-                    }
+                    // We use Modulo to ensure the position lies within the bounds of the track list.
+                    Position = (Position + positions).Mod(TrackListSize);
                     break;
                 case PlayingMode.LoopSingle:
                     break;
