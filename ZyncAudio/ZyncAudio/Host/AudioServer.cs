@@ -23,11 +23,14 @@ namespace ZyncAudio.Host
 
         public ISocketServer SocketServer { get; private set; }
 
-        private Dictionary<MessageIdentifier, Action<byte[], Socket>> _handlers = new();
+        private readonly Dictionary<MessageIdentifier, Action<byte[], Socket>> _handlers = new();
 
         public Pinger Pinger { get; private init; }
 
         private PlaybackState _playbackState = PlaybackState.Stopped;
+
+        public event Action? PlaybackStarted;
+        public event Action? PlaybackStoppedNaturally;
 
         public AudioServer(ISocketServer socketServer)
         {
@@ -47,44 +50,32 @@ namespace ZyncAudio.Host
         /// </summary>
         private readonly object _playOrStopLockObject = new();
 
-        private Playlist? _currentPlayList;
-
-        public async void PlayListAsync(Playlist playlist)
+        public bool PlayAsync(string? fileName)
         {
-            _currentPlayList = playlist;
+            if (fileName == null) return false;
 
-            string? currentTrack;
-            while ((currentTrack = _currentPlayList.Current) != null)
-            {
-                await PlayAsync(currentTrack).ConfigureAwait(false);
-                _currentPlayList.MoveNext();
-            }
-        }
-
-        private Task PlayAsync(string fileName)
-        {
             lock (_playOrStopLockObject)
             {
                 if (_playbackState == PlaybackState.Playing)
                 {
-                    return Task.FromResult(false);
+                    return false;
                 }
 
                 _playbackState = PlaybackState.Playing;
 
-                var tcs = new TaskCompletionSource();
-                ThreadPool.QueueUserWorkItem((_) => { PlaySong(fileName, tcs); });
-                //Task.Run(() => { PlaySong(fileName, tcs); }).ConfigureAwait(false);
-                return tcs.Task;
+                ThreadPool.QueueUserWorkItem((_) => { PlaySong(fileName); });
+                return true;
             }
         }
 
-        private void PlaySong(string fileName, TaskCompletionSource tcs)
+        private void PlaySong(string fileName)//, TaskCompletionSource tcs)
         {
+            PlaybackStarted?.Invoke();
+
             // Inform all clients to stop any audio they might be playing.
             SocketServer.SendAll(BitConverter.GetBytes((int)(MessageIdentifier.StopAudio | MessageIdentifier.AudioProcessing)));
 
-            AudioFileReader reader = new AudioFileReader(fileName);
+            var reader = new AudioFileReader(fileName);
 
             #region Send the Wave Format information
             byte[] waveFormatBytes = WaveFormatHelper.ToBytes(reader.WaveFormat);
@@ -137,7 +128,7 @@ namespace ZyncAudio.Host
                     {
                         // Inform the client that it should begin playing immediately.
                         SocketServer.Send(BitConverter.GetBytes((int)(MessageIdentifier.PlayAudio |
-                                                                      MessageIdentifier.AudioProcessing | 
+                                                                      MessageIdentifier.AudioProcessing |
                                                                       MessageIdentifier.ProcessImmediately)), remainingClientsToSendTo[i].Key);
                         remainingClientsToSendTo.RemoveAt(i);
                         i--;
@@ -149,6 +140,10 @@ namespace ZyncAudio.Host
 
             #endregion
 
+            Stopwatch playingTimeWatch = new();
+            playingTimeWatch.Start();
+
+            // Give clients a second to compose themselves as they have just started playing audio.
             Thread.Sleep(250);
 
             #region Send Remaining Audio at 1 sample block per second.
@@ -161,7 +156,7 @@ namespace ZyncAudio.Host
 
                 //Debug.WriteLine("Server: Sending samples" + DateTime.Now.ToLongTimeString());
 
-                Thread.Sleep(990);
+                Thread.Sleep(1000);
             }
             #endregion
 
@@ -169,28 +164,38 @@ namespace ZyncAudio.Host
 
             if (!_stopPlayback)
             {
-                // Wait for clients to run out of samples
-                Thread.Sleep(4000);
+                // Wait for clients to finish playing.
+                while (playingTimeWatch.Elapsed < reader.TotalTime)
+                {
+                    Thread.Sleep(250);
+                }
             }
 
             SocketServer.SendAll(BitConverter.GetBytes((int)(MessageIdentifier.StopAudio | MessageIdentifier.AudioProcessing)));
 
             // Inform waiting threads that playback has stopped.
             _stoppedPlayback.Set();
+
             // Reset state to stopped.
-            _stopPlayback = false;
             _playbackState = PlaybackState.Stopped;
 
-            tcs.TrySetResult();
+            if (!_stopPlayback)
+            {
+                // If there was no signal to stop the playback then it
+                // has stopped "naturally".
+                PlaybackStoppedNaturally?.Invoke();
+            }
+
+            _stopPlayback = false;
         }
 
         private volatile bool _stopPlayback = false;
         private readonly ManualResetEvent _stoppedPlayback = new ManualResetEvent(false);
 
         /// <summary>
-        /// Stops playback of the current track and depending on the <see cref="Playlist.PlayingMode"/>, another song may start playing.
+        /// Stops playback of the current track.
         /// </summary>
-        public bool Next()
+        public bool Stop()
         {
             lock (_playOrStopLockObject)
             {

@@ -38,7 +38,8 @@ namespace ZyncAudio
             _server.ClientConnected = ClientConnected;
             _server.ClientDisconnected = ClientDisconnected;
 
-            _playlist.PositionChanged += RefreshNowPlaying;
+            _audioServer.PlaybackStarted += RefreshNowPlaying;
+            _audioServer.PlaybackStoppedNaturally += PlaybackStoppedNaturally;
         }
 
         private void ClientConnected(Socket client)
@@ -74,28 +75,12 @@ namespace ZyncAudio
 
         private void PlayBtn_Click(object sender, EventArgs e)
         {
-            EnsureServerIsPlaying();
-            RefreshNowPlaying();
-        }
-
-        private void EnsureServerIsPlaying()
-        {
-            if(_playlist.Size == 0) { return; }
-
-            Playlist.PlayingMode playingMode = _playlist.Mode;
-            _playlist.Mode = Playlist.PlayingMode.LoopAll;
-
-            if (playingMode == Playlist.PlayingMode.Stop)
-            {
-                _playlist.MoveNext();
-                _audioServer.PlayListAsync(_playlist);
-            }
+            _audioServer.PlayAsync(_playlist.Current);
         }
 
         private void StopBtn_Click(object sender, EventArgs e)
         {
-            _playlist.Mode = Playlist.PlayingMode.Stop;
-            _audioServer.Next();
+            _audioServer.Stop();
 
             RefreshNowPlaying();
         }
@@ -133,7 +118,7 @@ namespace ZyncAudio
 
         private void HostForm_FormClosing(object sender, FormClosingEventArgs e)
         {
-            _audioServer.Next();
+            _audioServer.Stop();
             _server.Close();
         }
 
@@ -165,19 +150,31 @@ namespace ZyncAudio
             PlayQueue.Items.Clear();
         }
 
+        private void PlaybackStoppedNaturally()
+        {
+            _playlist.MoveNext();
+            _audioServer.PlayAsync(_playlist.Current);
+        }
+
         private void NextBtn_Click(object sender, EventArgs e)
         {
-            EnsureServerIsPlaying();
-            _audioServer.Next();
+            _audioServer.Stop();
+            _playlist.MoveNext();
+            _audioServer.PlayAsync(_playlist.Current);
         }
 
         private void PreviousBtn_Click(object sender, EventArgs e)
         {
-            EnsureServerIsPlaying();
+            _audioServer.Stop();
+            _playlist.MovePrevious(1);
+            _audioServer.PlayAsync(_playlist.Current);
+        }
 
-            // Next will push the playlist forward once so we have to move back twice.
-            _playlist.MovePrevious(2);
-            _audioServer.Next();
+        private void PlayQueue_MouseDown(object sender, MouseEventArgs e)
+        {
+            _playlist.Position = PlayQueue.SelectedIndex;
+            _audioServer.Stop();
+            _audioServer.PlayAsync(_playlist.Current);
         }
 
         private void RefreshNowPlaying()
@@ -187,15 +184,6 @@ namespace ZyncAudio
                 if (_playlist.Position < 0 || _playlist.Position >= PlayQueue.Items.Count) { return; }
                 PlayQueue.SelectedIndex = _playlist.Position;
             }));
-        }
-
-        private void PlayQueue_MouseDown(object sender, MouseEventArgs e)
-        {
-            EnsureServerIsPlaying();
-
-            _playlist.Position = PlayQueue.SelectedIndex;
-            _playlist.MovePrevious();
-            _audioServer.Next();
         }
     }
 

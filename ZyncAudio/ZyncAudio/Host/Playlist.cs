@@ -17,47 +17,17 @@ namespace ZyncAudio.Host
             /// Any calls to <c>MoveNext()</c> or <c>MovePrevious()</c> are effectively NOPs, <see cref="Current"/> won't change in this mode.
             /// </summary>
             LoopSingle,
-            /// <summary>
-            /// Effectively pauses the playlist from proceeding to the next song.
-            /// <para/>
-            /// <c>MoveNext()</c> or <c>MovePrevious()</c> will halt until the state changes out of <see cref="Pause"/>.
-            /// </summary>
-            Pause,
-            /// <summary>
-            /// Any calls to <c>MoveNext()</c> or <c>MovePrevious()</c> will return false indicating the end of enumeration.
-            /// </summary>
-            Stop
         }
 
-        private PlayingMode _mode = PlayingMode.Stop;
         /// <summary>
         /// Determines the current rule-set(mode) that will be used for each call to <c>MoveNext()</c> and <c>MovePrevious()</c>.
         /// </summary>
-        public PlayingMode Mode
-        {
-            get => _mode;
-            set
-            {
-                if (value != PlayingMode.Pause)
-                {
-                    _waitForUnpause.Set();
-                }
-
-                _mode = value;
-            }
-        }
+        public PlayingMode Mode { get; set; } = PlayingMode.LoopAll;
 
         /// <summary>
         /// The index of the current track in the playlist.
         /// </summary>
-        public int Position { get; set; } = -1;
-
-        /// <summary>
-        /// Triggered when the position is changed by one of the <c>Move</c> methods.
-        /// </summary>
-        public event Action? PositionChanged;
-
-        private readonly ManualResetEvent _waitForUnpause = new(false);
+        public int Position { get; set; } = 0;
 
         private readonly List<string> _trackFilePaths = new();
 
@@ -68,7 +38,7 @@ namespace ZyncAudio.Host
         {
             get
             {
-                if (Position < 0 || Position >= _trackFilePaths.Count)
+                if (Position < 0 || Position >= _trackFilePaths.Count || _trackFilePaths.Count == 0)
                     return null;
 
                 return _trackFilePaths[Position];
@@ -87,9 +57,8 @@ namespace ZyncAudio.Host
 
         public void Clear()
         {
-            Position = -1;
+            Position = 0;
             _trackFilePaths.Clear();
-            Mode = PlayingMode.Stop;
         }
 
         /// <summary>
@@ -114,17 +83,9 @@ namespace ZyncAudio.Host
                             Position--;
                         }
                     }
-                    PositionChanged?.Invoke();
                     break;
                 case PlayingMode.LoopSingle:
                     break;
-                case PlayingMode.Pause:
-                    _waitForUnpause.WaitOne();
-                    break;
-                case PlayingMode.Stop:
-                    Position = -1;
-                    PositionChanged?.Invoke();
-                    return false;
             }
 
             return true;
@@ -152,17 +113,9 @@ namespace ZyncAudio.Host
                             Position++;
                         }
                     }
-                    PositionChanged?.Invoke();
                     break;
                 case PlayingMode.LoopSingle:
                     break;
-                case PlayingMode.Pause:
-                    _waitForUnpause.WaitOne();
-                    break;
-                case PlayingMode.Stop:
-                    Position = -1;
-                    PositionChanged?.Invoke();
-                    return false;
             }
 
             return true;
