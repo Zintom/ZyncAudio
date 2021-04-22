@@ -166,7 +166,7 @@ namespace ZyncAudio
         private void PreviousBtn_Click(object sender, EventArgs e)
         {
             _audioServer.Stop();
-            _playlist.MovePrevious(1);
+            _playlist.MovePrevious();
             _audioServer.PlayAsync(_playlist.Current);
         }
 
