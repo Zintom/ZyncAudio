@@ -124,8 +124,10 @@ namespace ZyncAudio
             if (_waveOut == null)
             {
                 _logger?.Log("Wave Out device was null so creating.");
-                _waveOut = new WaveOutEvent();
-                _waveOut.Volume = 1;
+                _waveOut = new WaveOutEvent
+                {
+                    Volume = 1
+                };
 
                 // We must have received the WaveFormat info before being
                 // able to create our BufferedWaveProvider.
