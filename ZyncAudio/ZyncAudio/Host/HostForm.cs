@@ -27,7 +27,7 @@ namespace ZyncAudio
             ClientListView.View = View.Details;
             ClientListView.FullRowSelect = true;
             ClientListView.MultiSelect = false;
-            ClientListView.Columns.Add("address", "Address", 120);
+            ClientListView.Columns.Add("address", "Address", 124);
             ClientListView.Columns.Add("ping", "Ping", 50);
 
             _logger = new ConsoleLogger();
@@ -94,9 +94,10 @@ namespace ZyncAudio
             NextBtn.Enabled = true;
             PreviousBtn.Enabled = true;
             StopBtn.Enabled = true;
-            PlayQueue.Enabled = true;
-            LoadFolderBtn.Enabled = true;
-            UnloadItems.Enabled = true;
+            _playListView.Enabled = true;
+            _loadFolderBtn.Enabled = true;
+            _unloadPlaylistBtn.Enabled = true;
+            _shuffleBtn.Enabled = true;
         }
 
         private void PingChecker_Tick(object sender, EventArgs e)
@@ -131,14 +132,16 @@ namespace ZyncAudio
 
                 string folder = folderBrowser.SelectedPath;
 
-                foreach (var file in Directory.GetFiles(folder))
+                foreach (var file in Directory.GetFiles(folder,
+                                                        "",
+                                                        _searchSubFoldersChkBox.Checked ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly))
                 {
                     if (file.EndsWith(".wav")
                         || file.EndsWith(".mp3")
                         || file.EndsWith(".flac"))
                     {
                         _playlist.Add(file);
-                        PlayQueue.Items.Add(new FileInfo(file).Name);
+                        _playListView.Items.Add(new FileInfo(file).Name);
                     }
                 }
             }
@@ -147,7 +150,7 @@ namespace ZyncAudio
         private void UnloadItems_Click(object sender, EventArgs e)
         {
             _playlist.Clear();
-            PlayQueue.Items.Clear();
+            _playListView.Items.Clear();
         }
 
         private void PlaybackStoppedNaturally()
@@ -172,18 +175,32 @@ namespace ZyncAudio
 
         private void PlayQueue_MouseDown(object sender, MouseEventArgs e)
         {
-            _playlist.Position = PlayQueue.SelectedIndex;
+            _playlist.Position = _playListView.SelectedIndex;
             _audioServer.Stop();
             _audioServer.PlayAsync(_playlist.Current);
         }
 
         private void RefreshNowPlaying()
         {
-            PlayQueue.Invoke(new Action(() =>
+            _playListView.Invoke(new Action(() =>
             {
-                if (_playlist.Position < 0 || _playlist.Position >= PlayQueue.Items.Count) { return; }
-                PlayQueue.SelectedIndex = _playlist.Position;
+                if (_playlist.Position < 0 || _playlist.Position >= _playListView.Items.Count) { return; }
+                _playListView.SelectedIndex = _playlist.Position;
             }));
+        }
+
+        private void ShuffleBtnClicked(object sender, EventArgs e)
+        {
+            _playListView.Enabled = false;
+
+            _playlist.Shuffle();
+            _playListView.Items.Clear();
+            foreach (string trackFileNames in _playlist.Tracks)
+            {
+                _playListView.Items.Add(new FileInfo(trackFileNames).Name);
+            }
+
+            _playListView.Enabled = true;
         }
     }
 
