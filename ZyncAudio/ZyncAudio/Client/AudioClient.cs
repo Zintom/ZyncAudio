@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Net.Sockets;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using ZyncAudio.Extensions;
@@ -45,25 +46,27 @@ namespace ZyncAudio
 
         private readonly ILogger? _logger;
 
+        public event Action<string>? TrackInformationChanged;
+
         public AudioClient(ISocketClient socketClient, ILogger? logger)
         {
             _lowPriorityWorkPump = new();
-            _lowPriorityWorkPump.Run(ThreadPriority.Lowest, "Low Priority Work Pump");
+            _lowPriorityWorkPump.Run(ThreadPriority.Lowest, threadName: "Low Priority Work Pump", isBackground: true);
 
             _highPriorityWorkPump = new();
-            _highPriorityWorkPump.Run(ThreadPriority.AboveNormal, "High Priority Work Pump");
+            _highPriorityWorkPump.Run(ThreadPriority.AboveNormal, threadName: "High Priority Work Pump", isBackground: true);
 
             SocketClient = socketClient;
             SocketClient.DataReceived = DataReceived;
             SocketClient.SocketError = SocketError;
 
-            _handlers.Add(MessageIdentifier.WaveFormatInformation| 
+            _handlers.Add(MessageIdentifier.WaveFormatInformation |
                           MessageIdentifier.AudioProcessing, HandleWaveFormatInformation);
 
             _handlers.Add(MessageIdentifier.AudioSamples |
                           MessageIdentifier.AudioProcessing, HandleAudioSamples);
 
-            _handlers.Add(MessageIdentifier.PlayAudio | 
+            _handlers.Add(MessageIdentifier.PlayAudio |
                           MessageIdentifier.AudioProcessing |
                           MessageIdentifier.ProcessImmediately, HandlePlayAudio);
 
@@ -72,6 +75,9 @@ namespace ZyncAudio
 
             _handlers.Add(MessageIdentifier.Volume |
                           MessageIdentifier.AudioProcessing, HandleVolumeChangeRequest);
+
+            _handlers.Add(MessageIdentifier.TrackInformation |
+                          MessageIdentifier.NotUrgent, HandleTrackInformationChanged);
 
             _handlers.Add(MessageIdentifier.Request | MessageIdentifier.Ping, HandlePingRequest);
             _logger = logger;
@@ -90,7 +96,8 @@ namespace ZyncAudio
             if (_handlers.TryGetValue(messageIdentifier, out Action<byte[]>? handler))
             {
                 if (messageIdentifier.HasFlag(MessageIdentifier.AudioProcessing) &&
-                    !messageIdentifier.HasFlag(MessageIdentifier.ProcessImmediately))
+                    !messageIdentifier.HasFlag(MessageIdentifier.ProcessImmediately)
+                    || messageIdentifier.HasFlag(MessageIdentifier.NotUrgent))
                 {
                     // Audio Processing requests go into a separate low priority queue(apart from those flagged as ProcessImmediately)
                     // as Audio Processing can clog the message pump as it may take from 10-200 ms to complete.
@@ -193,6 +200,14 @@ namespace ZyncAudio
             {
                 _waveOut.Volume = _targetVolume;
             }
+        }
+
+        private void HandleTrackInformationChanged(byte[] data)
+        {
+            // Ignore the first 4 bytes as that is the message identifier header.
+            Span<byte> nowPlayingText = data.AsSpan(sizeof(int));
+
+            TrackInformationChanged?.Invoke(Encoding.UTF8.GetString(nowPlayingText));
         }
 
         private void SocketError(SocketException exception, Socket client)
