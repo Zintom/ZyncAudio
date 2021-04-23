@@ -41,6 +41,7 @@ namespace ZyncAudio
         private WaveFormat? _lastWaveFormatReceived;
         private BufferedWaveProvider? _bufferedWaveProvider;
         private WaveOutEvent? _waveOut;
+        private float _targetVolume = 1.0f;
 
         private readonly ILogger? _logger;
 
@@ -68,6 +69,9 @@ namespace ZyncAudio
 
             _handlers.Add(MessageIdentifier.StopAudio |
                           MessageIdentifier.AudioProcessing, HandleStopAudio);
+
+            _handlers.Add(MessageIdentifier.Volume |
+                          MessageIdentifier.AudioProcessing, HandleVolumeChangeRequest);
 
             _handlers.Add(MessageIdentifier.Request | MessageIdentifier.Ping, HandlePingRequest);
             _logger = logger;
@@ -126,7 +130,7 @@ namespace ZyncAudio
                 _logger?.Log("Wave Out device was null so creating.");
                 _waveOut = new WaveOutEvent
                 {
-                    Volume = 1
+                    Volume = _targetVolume
                 };
 
                 // We must have received the WaveFormat info before being
@@ -173,6 +177,22 @@ namespace ZyncAudio
             _bufferedWaveProvider?.ClearBuffer();
             _bufferedWaveProvider = null;
             _lastWaveFormatReceived = null;
+        }
+
+        private void HandleVolumeChangeRequest(byte[] data)
+        {
+            // Ignore the first 4 bytes as that is the message identifier header.
+            Span<byte> newVolume = data.AsSpan(sizeof(int));
+
+            _targetVolume = BitConverter.ToSingle(newVolume);
+
+            // Ensure that Volume does not exceed/preceed valid values.
+            _targetVolume = Math.Clamp(_targetVolume, 0.0f, 1.0f);
+
+            if (_waveOut != null)
+            {
+                _waveOut.Volume = _targetVolume;
+            }
         }
 
         private void SocketError(SocketException exception, Socket client)
