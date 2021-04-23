@@ -6,6 +6,10 @@ using System.Net.Sockets;
 using System.Threading;
 using ZyncAudio.Host;
 using System.Windows.Forms;
+using Zintom.StorageFacility;
+using ZyncAudio.Extensions;
+using System.Drawing;
+using System.Diagnostics.CodeAnalysis;
 
 namespace ZyncAudio
 {
@@ -30,6 +34,7 @@ namespace ZyncAudio
             ClientListView.Columns.Add("address", "Address", 124);
             ClientListView.Columns.Add("ping", "Ping", 50);
 
+
             _logger = new ConsoleLogger();
             _server = new Server(_logger);
             _audioServer = new AudioServer(_server);
@@ -40,15 +45,23 @@ namespace ZyncAudio
 
             _audioServer.PlaybackStarted += RefreshNowPlaying;
             _audioServer.PlaybackStoppedNaturally += PlaybackStoppedNaturally;
+
+            var settings = Storage.GetStorage(Program.SettingsFile);
+            _volumeControlBar.Value = settings.Integers.GetValue("volumeSliderValue", 100);
+            VolumeControlBar_Scroll(null!, null!);
+            _searchSubFoldersBtn.Checked = settings.Booleans.GetValue("searchSubFoldersOnLoadFolder", false);
         }
 
         private void ClientConnected(Socket client)
         {
             Invoke(new Action(() =>
             {
-                CloseEntryBtn.Enabled = true;
+                _closeEntryBtn.Enabled = true;
 
                 ClientListView.Items.Add(new ListViewItem(new string[] { client.RemoteEndPoint?.ToString() ?? "null", "0ms" }));
+
+                // Ensure client is set to the correct audio volume level.
+                _audioServer.ChangeVolume(_volumeControlBar.Value / 100f);
             }));
         }
 
@@ -100,13 +113,15 @@ namespace ZyncAudio
             {
                 _paused = true;
                 _pausedOnByte = pausedBytePosition;
-                PlayBtn.Text = "Play";
+                _playBtn.BackgroundImage = Properties.Resources.media_play_8x;
+                _toolTipProvider.SetToolTip(_playBtn, "Plays the current track.");
             }
             else
             {
                 _paused = false;
                 _pausedOnByte = 0L;
-                PlayBtn.Text = "Pause";
+                _playBtn.BackgroundImage = Properties.Resources.media_pause_8x;
+                _toolTipProvider.SetToolTip(_playBtn, "Pauses the current track.");
             }
         }
 
@@ -118,22 +133,25 @@ namespace ZyncAudio
 
                 RefreshNowPlaying();
                 SetPausedState(true);
+
+                _audioServer.ChangeNowPlayingInfo(Program.NoAudioPlaying);
             }
         }
 
         private void CloseEntryBtn_Click(object sender, EventArgs e)
         {
             _server.StopAccepting();
-            CloseEntryBtn.Enabled = false;
+            _closeEntryBtn.Enabled = false;
 
-            PlayBtn.Enabled = true;
-            NextBtn.Enabled = true;
-            PreviousBtn.Enabled = true;
-            StopBtn.Enabled = true;
+            _playBtn.Enabled = true;
+            _stopBtn.Enabled = true;
+            _previousBtn.Enabled = true;
+            _nextBtn.Enabled = true;
             _playListView.Enabled = true;
             _loadFolderBtn.Enabled = true;
             _unloadPlaylistBtn.Enabled = true;
             _shuffleBtn.Enabled = true;
+            _searchSubFoldersBtn.Enabled = true;
         }
 
         private void PingChecker_Tick(object sender, EventArgs e)
@@ -157,6 +175,10 @@ namespace ZyncAudio
         {
             _audioServer.Stop();
             _server.Close();
+
+            var settingsEditor = Storage.GetStorage(Program.SettingsFile).Edit();
+            settingsEditor.PutValue("volumeSliderValue", _volumeControlBar.Value)
+                          .PutValue("searchSubFoldersOnLoadFolder", _searchSubFoldersBtn.Checked).Commit();
         }
 
         private void LoadFolderBtn_Click(object sender, EventArgs e)
@@ -170,7 +192,7 @@ namespace ZyncAudio
 
                 foreach (var file in Directory.GetFiles(folder,
                                                         "",
-                                                        _searchSubFoldersChkBox.Checked ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly))
+                                                        _searchSubFoldersBtn.Checked ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly))
                 {
                     if (file.EndsWith(".wav")
                         || file.EndsWith(".mp3")
@@ -193,6 +215,8 @@ namespace ZyncAudio
         {
             _playlist.MoveNext();
             _audioServer.PlayAsync(_playlist.Current);
+
+            RefreshNowPlaying();
         }
 
         private void NextBtn_Click(object sender, EventArgs e)
@@ -202,6 +226,11 @@ namespace ZyncAudio
                 _audioServer.Stop();
                 _playlist.MoveNext();
                 _audioServer.PlayAsync(_playlist.Current);
+
+                if (_playlist.Current == null)
+                {
+                    RefreshNowPlaying();
+                }
 
                 SetPausedState(false);
             }
@@ -214,6 +243,11 @@ namespace ZyncAudio
                 _audioServer.Stop();
                 _playlist.MovePrevious();
                 _audioServer.PlayAsync(_playlist.Current);
+
+                if (_playlist.Current == null)
+                {
+                    RefreshNowPlaying();
+                }
 
                 SetPausedState(false);
             }
@@ -233,6 +267,15 @@ namespace ZyncAudio
 
         private void RefreshNowPlaying()
         {
+            if (_playlist.Current != null)
+            {
+                _audioServer.ChangeNowPlayingInfo("Now playing: " + new FileInfo(_playlist.Current).Name);
+            }
+            else
+            {
+                _audioServer.ChangeNowPlayingInfo(Program.NoAudioPlaying);
+            }
+
             _playListView.Invoke(new Action(() =>
             {
                 if (_playlist.Position < 0 || _playlist.Position >= _playListView.Items.Count) { return; }
@@ -257,7 +300,16 @@ namespace ZyncAudio
         private void VolumeControlBar_Scroll(object sender, EventArgs e)
         {
             _audioServer.ChangeVolume(_volumeControlBar.Value / 100f);
+
+            _audioLevelsImg.BackgroundImage = _volumeControlBar.Value switch
+            {
+                < 33 => Properties.Resources.volume_off_8x,
+                < 66 => Properties.Resources.volume_low_8x,
+                _ => Properties.Resources.volume_high_8x
+            };
         }
+
+        private void SearchSubFoldersBtn_Click(object sender, EventArgs e) => _searchSubFoldersBtn.Checked = !_searchSubFoldersBtn.Checked;
     }
 
     public class FormLogger : ILogger
