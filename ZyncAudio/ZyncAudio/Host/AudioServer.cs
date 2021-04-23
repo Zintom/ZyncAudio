@@ -72,7 +72,7 @@ namespace ZyncAudio.Host
             }
         }
 
-        private void PlaySong(string fileName)//, TaskCompletionSource tcs)
+        private void PlaySong(string fileName)
         {
             PlaybackStarted?.Invoke();
 
@@ -102,7 +102,10 @@ namespace ZyncAudio.Host
             // Send ~4 seconds of audio to get started.
             //
             byte[] initialSamples = new byte[sampleBlockSize * 4];
-            reader.Read(initialSamples, 0, initialSamples.Length);
+            int initialBytesRead = reader.Read(initialSamples, 0, initialSamples.Length);
+            // Some tracks may be less than 4 seconds long so trim down the initial sample length down
+            // to what was actually read from the reader.
+            initialSamples = initialSamples.AsSpan(0, initialBytesRead).ToArray();
 
             SocketServer.SendAll(ArrayHelpers.CombineArrays(BitConverter.GetBytes((int)(MessageIdentifier.AudioSamples | MessageIdentifier.AudioProcessing)),
                                                             initialSamples));
@@ -228,6 +231,15 @@ namespace ZyncAudio.Host
 
                 return true;
             }
+        }
+
+        public void ChangeVolume(float volume = 1.0f)
+        {
+            // Ensure that Volume does not exceed/preceed valid values.
+            volume = Math.Clamp(volume, 0.0f, 1.0f);
+
+            SocketServer.SendAll(ArrayHelpers.CombineArrays(BitConverter.GetBytes((int)(MessageIdentifier.Volume | MessageIdentifier.AudioProcessing)),
+                                                            BitConverter.GetBytes(volume)));
         }
 
         private void DataReceived(byte[] data, Socket client)
