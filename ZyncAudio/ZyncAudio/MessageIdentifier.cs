@@ -12,16 +12,17 @@ namespace ZyncAudio
         AudioSamples = 8,
         PlayAudio = 16,
         StopAudio = 32,
-        Ping = 64,
+        Volume = 64,
+        Ping = 128,
 
         /// <summary>
         /// This message relates to audio processing.
         /// </summary>
-        AudioProcessing = 128,
+        AudioProcessing = 256,
 
         /// <summary>
         /// This message should be processed immediately (or as soon as possible).
         /// </summary>
-        ProcessImmediately = 256
+        ProcessImmediately = 512,
     }
 }
