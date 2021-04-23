@@ -73,16 +73,52 @@ namespace ZyncAudio
 
         }
 
+        private bool _paused = true;
+        private long _pausedOnByte = 0L;
+        private readonly object _mediaActionLockObject = new();
         private void PlayBtn_Click(object sender, EventArgs e)
         {
-            _audioServer.PlayAsync(_playlist.Current);
+            lock (_mediaActionLockObject)
+            {
+                if (_paused)
+                {
+                    _audioServer.PlayAsync(_playlist.Current, _pausedOnByte);
+
+                    SetPausedState(false, 0L);
+                }
+                else
+                {
+                    SetPausedState(true, _audioServer.CurrentTrackPositionBytes);
+                    _audioServer.Stop();
+                }
+            }
+        }
+
+        private void SetPausedState(bool paused, long pausedBytePosition = 0L)
+        {
+            if (paused)
+            {
+                _paused = true;
+                _pausedOnByte = pausedBytePosition;
+                PlayBtn.Text = "Play";
+            }
+            else
+            {
+                _paused = false;
+                _pausedOnByte = 0L;
+                PlayBtn.Text = "Pause";
+            }
         }
 
         private void StopBtn_Click(object sender, EventArgs e)
         {
-            _audioServer.Stop();
+            lock (_mediaActionLockObject)
+            {
+                _audioServer.Stop();
 
-            RefreshNowPlaying();
+                RefreshNowPlaying();
+                SetPausedState(true);
+            }
         }
 
         private void CloseEntryBtn_Click(object sender, EventArgs e)
@@ -161,23 +197,38 @@ namespace ZyncAudio
 
         private void NextBtn_Click(object sender, EventArgs e)
         {
-            _audioServer.Stop();
-            _playlist.MoveNext();
-            _audioServer.PlayAsync(_playlist.Current);
+            lock (_mediaActionLockObject)
+            {
+                _audioServer.Stop();
+                _playlist.MoveNext();
+                _audioServer.PlayAsync(_playlist.Current);
+
+                SetPausedState(false);
+            }
         }
 
         private void PreviousBtn_Click(object sender, EventArgs e)
         {
-            _audioServer.Stop();
-            _playlist.MovePrevious();
-            _audioServer.PlayAsync(_playlist.Current);
+            lock (_mediaActionLockObject)
+            {
+                _audioServer.Stop();
+                _playlist.MovePrevious();
+                _audioServer.PlayAsync(_playlist.Current);
+
+                SetPausedState(false);
+            }
         }
 
         private void PlayQueue_MouseDown(object sender, MouseEventArgs e)
         {
-            _playlist.Position = _playListView.SelectedIndex;
-            _audioServer.Stop();
-            _audioServer.PlayAsync(_playlist.Current);
+            lock (_mediaActionLockObject)
+            {
+                _playlist.Position = _playListView.SelectedIndex;
+                _audioServer.Stop();
+                _audioServer.PlayAsync(_playlist.Current);
+
+                SetPausedState(false);
+            }
         }
 
         private void RefreshNowPlaying()
