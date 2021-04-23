@@ -76,7 +76,6 @@ namespace ZyncAudio
             this.Text = "Zync Audio Client";
             this.Activated += new System.EventHandler(this.ClientForm_Activated);
             this.Load += new System.EventHandler(this.ClientForm_Load);
-            this.LocationChanged += new System.EventHandler(this.ClientForm_LocationChanged);
             this.ResumeLayout(false);
             this.PerformLayout();
 
