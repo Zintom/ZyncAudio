@@ -202,6 +202,11 @@ namespace ZyncAudio
 
             _playListView.Enabled = true;
         }
+
+        private void VolumeControlBar_Scroll(object sender, EventArgs e)
+        {
+            _audioServer.ChangeVolume(_volumeControlBar.Value / 100f);
+        }
     }
 
     public class FormLogger : ILogger

@@ -45,15 +45,17 @@ namespace ZyncAudio
             this._serverGroupBox = new System.Windows.Forms.GroupBox();
             this._mediaGroupBox = new System.Windows.Forms.GroupBox();
             this._shuffleBtn = new System.Windows.Forms.Button();
+            this._volumeControlBar = new System.Windows.Forms.TrackBar();
             this._serverGroupBox.SuspendLayout();
             this._mediaGroupBox.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this._volumeControlBar)).BeginInit();
             this.SuspendLayout();
             // 
             // PlayBtn
             // 
             this.PlayBtn.Anchor = System.Windows.Forms.AnchorStyles.Bottom;
             this.PlayBtn.Enabled = false;
-            this.PlayBtn.Location = new System.Drawing.Point(142, 353);
+            this.PlayBtn.Location = new System.Drawing.Point(142, 390);
             this.PlayBtn.Name = "PlayBtn";
             this.PlayBtn.Size = new System.Drawing.Size(53, 37);
             this.PlayBtn.TabIndex = 0;
@@ -65,7 +67,7 @@ namespace ZyncAudio
             // 
             this.StopBtn.Anchor = System.Windows.Forms.AnchorStyles.Bottom;
             this.StopBtn.Enabled = false;
-            this.StopBtn.Location = new System.Drawing.Point(277, 353);
+            this.StopBtn.Location = new System.Drawing.Point(277, 390);
             this.StopBtn.Name = "StopBtn";
             this.StopBtn.Size = new System.Drawing.Size(45, 37);
             this.StopBtn.TabIndex = 1;
@@ -77,7 +79,7 @@ namespace ZyncAudio
             // 
             this.CloseEntryBtn.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
             this.CloseEntryBtn.Enabled = false;
-            this.CloseEntryBtn.Location = new System.Drawing.Point(13, 352);
+            this.CloseEntryBtn.Location = new System.Drawing.Point(13, 438);
             this.CloseEntryBtn.Name = "CloseEntryBtn";
             this.CloseEntryBtn.Size = new System.Drawing.Size(112, 37);
             this.CloseEntryBtn.TabIndex = 2;
@@ -92,7 +94,7 @@ namespace ZyncAudio
             this.ClientListView.HideSelection = false;
             this.ClientListView.Location = new System.Drawing.Point(13, 21);
             this.ClientListView.Name = "ClientListView";
-            this.ClientListView.Size = new System.Drawing.Size(178, 320);
+            this.ClientListView.Size = new System.Drawing.Size(178, 406);
             this.ClientListView.TabIndex = 4;
             this.ClientListView.UseCompatibleStateImageBehavior = false;
             // 
@@ -113,7 +115,7 @@ namespace ZyncAudio
             this._playListView.ItemHeight = 15;
             this._playListView.Location = new System.Drawing.Point(12, 39);
             this._playListView.Name = "_playListView";
-            this._playListView.Size = new System.Drawing.Size(364, 267);
+            this._playListView.Size = new System.Drawing.Size(364, 302);
             this._playListView.TabIndex = 5;
             this._playListView.MouseDown += new System.Windows.Forms.MouseEventHandler(this.PlayQueue_MouseDown);
             // 
@@ -131,7 +133,7 @@ namespace ZyncAudio
             // 
             this._loadFolderBtn.Anchor = System.Windows.Forms.AnchorStyles.Bottom;
             this._loadFolderBtn.Enabled = false;
-            this._loadFolderBtn.Location = new System.Drawing.Point(144, 313);
+            this._loadFolderBtn.Location = new System.Drawing.Point(144, 350);
             this._loadFolderBtn.Name = "_loadFolderBtn";
             this._loadFolderBtn.Size = new System.Drawing.Size(92, 29);
             this._loadFolderBtn.TabIndex = 7;
@@ -143,7 +145,7 @@ namespace ZyncAudio
             // 
             this.NextBtn.Anchor = System.Windows.Forms.AnchorStyles.Bottom;
             this.NextBtn.Enabled = false;
-            this.NextBtn.Location = new System.Drawing.Point(201, 353);
+            this.NextBtn.Location = new System.Drawing.Point(201, 390);
             this.NextBtn.Name = "NextBtn";
             this.NextBtn.Size = new System.Drawing.Size(70, 37);
             this.NextBtn.TabIndex = 8;
@@ -155,7 +157,7 @@ namespace ZyncAudio
             // 
             this.PreviousBtn.Anchor = System.Windows.Forms.AnchorStyles.Bottom;
             this.PreviousBtn.Enabled = false;
-            this.PreviousBtn.Location = new System.Drawing.Point(66, 353);
+            this.PreviousBtn.Location = new System.Drawing.Point(66, 390);
             this.PreviousBtn.Name = "PreviousBtn";
             this.PreviousBtn.Size = new System.Drawing.Size(70, 37);
             this.PreviousBtn.TabIndex = 9;
@@ -167,7 +169,7 @@ namespace ZyncAudio
             // 
             this._unloadPlaylistBtn.Anchor = System.Windows.Forms.AnchorStyles.Bottom;
             this._unloadPlaylistBtn.Enabled = false;
-            this._unloadPlaylistBtn.Location = new System.Drawing.Point(242, 313);
+            this._unloadPlaylistBtn.Location = new System.Drawing.Point(242, 350);
             this._unloadPlaylistBtn.Name = "_unloadPlaylistBtn";
             this._unloadPlaylistBtn.Size = new System.Drawing.Size(92, 29);
             this._unloadPlaylistBtn.TabIndex = 10;
@@ -179,7 +181,7 @@ namespace ZyncAudio
             // 
             this._searchSubFoldersChkBox.Anchor = System.Windows.Forms.AnchorStyles.Bottom;
             this._searchSubFoldersChkBox.AutoSize = true;
-            this._searchSubFoldersChkBox.Location = new System.Drawing.Point(13, 319);
+            this._searchSubFoldersChkBox.Location = new System.Drawing.Point(13, 356);
             this._searchSubFoldersChkBox.Name = "_searchSubFoldersChkBox";
             this._searchSubFoldersChkBox.Size = new System.Drawing.Size(125, 19);
             this._searchSubFoldersChkBox.TabIndex = 11;
@@ -194,7 +196,7 @@ namespace ZyncAudio
             this._serverGroupBox.Controls.Add(this.CloseEntryBtn);
             this._serverGroupBox.Location = new System.Drawing.Point(430, 12);
             this._serverGroupBox.Name = "_serverGroupBox";
-            this._serverGroupBox.Size = new System.Drawing.Size(203, 404);
+            this._serverGroupBox.Size = new System.Drawing.Size(203, 490);
             this._serverGroupBox.TabIndex = 12;
             this._serverGroupBox.TabStop = false;
             this._serverGroupBox.Text = "Server";
@@ -204,6 +206,7 @@ namespace ZyncAudio
             this._mediaGroupBox.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
+            this._mediaGroupBox.Controls.Add(this._volumeControlBar);
             this._mediaGroupBox.Controls.Add(this._shuffleBtn);
             this._mediaGroupBox.Controls.Add(this._playListView);
             this._mediaGroupBox.Controls.Add(this.label1);
@@ -216,7 +219,7 @@ namespace ZyncAudio
             this._mediaGroupBox.Controls.Add(this._loadFolderBtn);
             this._mediaGroupBox.Location = new System.Drawing.Point(12, 12);
             this._mediaGroupBox.Name = "_mediaGroupBox";
-            this._mediaGroupBox.Size = new System.Drawing.Size(388, 404);
+            this._mediaGroupBox.Size = new System.Drawing.Size(388, 490);
             this._mediaGroupBox.TabIndex = 13;
             this._mediaGroupBox.TabStop = false;
             this._mediaGroupBox.Text = "Media";
@@ -226,7 +229,7 @@ namespace ZyncAudio
             this._shuffleBtn.Anchor = System.Windows.Forms.AnchorStyles.Bottom;
             this._shuffleBtn.Enabled = false;
             this._shuffleBtn.Font = new System.Drawing.Font("Segoe UI Emoji", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
-            this._shuffleBtn.Location = new System.Drawing.Point(336, 313);
+            this._shuffleBtn.Location = new System.Drawing.Point(336, 350);
             this._shuffleBtn.Name = "_shuffleBtn";
             this._shuffleBtn.Size = new System.Drawing.Size(40, 40);
             this._shuffleBtn.TabIndex = 12;
@@ -234,11 +237,25 @@ namespace ZyncAudio
             this._shuffleBtn.UseVisualStyleBackColor = true;
             this._shuffleBtn.Click += new System.EventHandler(this.ShuffleBtnClicked);
             // 
+            // _volumeControlBar
+            // 
+            this._volumeControlBar.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this._volumeControlBar.Location = new System.Drawing.Point(66, 438);
+            this._volumeControlBar.Maximum = 100;
+            this._volumeControlBar.Name = "_volumeControlBar";
+            this._volumeControlBar.Size = new System.Drawing.Size(256, 45);
+            this._volumeControlBar.TabIndex = 14;
+            this._volumeControlBar.TickFrequency = 10;
+            this._volumeControlBar.TickStyle = System.Windows.Forms.TickStyle.Both;
+            this._volumeControlBar.Value = 100;
+            this._volumeControlBar.Scroll += new System.EventHandler(this.VolumeControlBar_Scroll);
+            // 
             // HostForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(645, 428);
+            this.ClientSize = new System.Drawing.Size(645, 514);
             this.Controls.Add(this._mediaGroupBox);
             this.Controls.Add(this._serverGroupBox);
             this.Location = new System.Drawing.Point(100, 100);
@@ -253,6 +270,7 @@ namespace ZyncAudio
             this._serverGroupBox.ResumeLayout(false);
             this._mediaGroupBox.ResumeLayout(false);
             this._mediaGroupBox.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)(this._volumeControlBar)).EndInit();
             this.ResumeLayout(false);
 
         }
@@ -274,5 +292,6 @@ namespace ZyncAudio
         private System.Windows.Forms.GroupBox _serverGroupBox;
         private System.Windows.Forms.GroupBox _mediaGroupBox;
         private System.Windows.Forms.Button _shuffleBtn;
+        private System.Windows.Forms.TrackBar _volumeControlBar;
     }
 }
