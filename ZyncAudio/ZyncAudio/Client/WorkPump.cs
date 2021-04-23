@@ -19,12 +19,13 @@ namespace ZyncAudio
         /// <summary>
         /// Runs the work pump on a new thread with the given <paramref name="threadPriority"/>.
         /// </summary>
-        public void Run(ThreadPriority threadPriority, string threadName = "WorkPumpThread")
+        public void Run(ThreadPriority threadPriority, string threadName = "WorkPumpThread", bool isBackground = false)
         {
             new Thread(RunInternal)
             {
                 Priority = threadPriority,
-                Name = threadName
+                Name = threadName,
+                IsBackground = isBackground
             }.Start();
         }
 
