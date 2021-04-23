@@ -9,6 +9,10 @@ namespace ZyncAudio
 {
     static class Program
     {
+        public const string SettingsFile = "settings";
+
+        public const string NoAudioPlaying = "No audio playing at this time.";
+
         /// <summary>
         ///  The main entry point for the application.
         /// </summary>
