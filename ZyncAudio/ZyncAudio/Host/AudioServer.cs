@@ -25,12 +25,14 @@ namespace ZyncAudio.Host
 
         private readonly Dictionary<MessageIdentifier, Action<byte[], Socket>> _handlers = new();
 
-        public Pinger Pinger { get; private init; }
-
         private PlaybackState _playbackState = PlaybackState.Stopped;
+
+        public Pinger Pinger { get; private init; }
 
         public event Action? PlaybackStarted;
         public event Action? PlaybackStoppedNaturally;
+
+        public long CurrentTrackPositionBytes { get; set; } = 0L;
 
         public AudioServer(ISocketServer socketServer)
         {
@@ -50,7 +52,7 @@ namespace ZyncAudio.Host
         /// </summary>
         private readonly object _playOrStopLockObject = new();
 
-        public bool PlayAsync(string? fileName)
+        public bool PlayAsync(string? fileName, long startOffsetBytePosition = 0)
         {
             if (fileName == null) return false;
 
@@ -63,8 +65,7 @@ namespace ZyncAudio.Host
 
                 _playbackState = PlaybackState.Playing;
 
-                //ThreadPool.QueueUserWorkItem((_) => { PlaySong(fileName); });
-                new Thread(() => PlaySong(fileName))
+                new Thread(() => PlaySong(fileName, startOffsetBytePosition))
                 {
                     Priority = ThreadPriority.AboveNormal
                 }.Start();
@@ -72,7 +73,7 @@ namespace ZyncAudio.Host
             }
         }
 
-        private void PlaySong(string fileName)
+        private void PlaySong(string fileName, long startOffsetBytePosition)
         {
             PlaybackStarted?.Invoke();
 
@@ -97,6 +98,20 @@ namespace ZyncAudio.Host
 
             #region Send Initial 4s of samples
             int sampleBlockSize = reader.WaveFormat.GetBitrate() / 8; // The bitrate is the number of bits per second, so divide it by 8 to gets the bytes per second.
+
+            // Align the start position with the block size.
+            startOffsetBytePosition -= startOffsetBytePosition % reader.WaveFormat.BlockAlign;
+
+            // Read out the bytes which we wish to skip past (the start offset)
+            byte[] startOffsetBuffer = new byte[startOffsetBytePosition];
+            int startOffsetBytesRead = reader.Read(startOffsetBuffer, 0, startOffsetBuffer.Length);
+
+            // If we read less than what we requested then we have come
+            // to the end of the stream.
+            if(startOffsetBytesRead < startOffsetBuffer.Length)
+            {
+                goto stopAudio;
+            }
 
             //
             // Send ~4 seconds of audio to get started.
@@ -167,6 +182,8 @@ namespace ZyncAudio.Host
             int bytesRead;
             while ((bytesRead = reader.Read(sampleBuffer, 0, sampleBlockSize)) > 0 && !_stopPlayback)
             {
+                CurrentTrackPositionBytes = reader.Position;
+
                 SocketServer.SendAll(ArrayHelpers.CombineArrays(BitConverter.GetBytes((int)(MessageIdentifier.AudioSamples | MessageIdentifier.AudioProcessing)),
                                                                 sampleBuffer));
 
