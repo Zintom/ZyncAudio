@@ -24,5 +24,12 @@ namespace ZyncAudio
         /// This message should be processed immediately (or as soon as possible).
         /// </summary>
         ProcessImmediately = 512,
+
+        /// <summary>
+        /// Essentially the opposite of <see cref="ProcessImmediately"/>.
+        /// </summary>
+        NotUrgent = 1024,
+
+        TrackInformation = 2048
     }
 }
