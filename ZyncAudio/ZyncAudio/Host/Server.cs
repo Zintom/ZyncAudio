@@ -100,9 +100,6 @@ namespace ZyncAudio.Host
                 }
                 catch (ObjectDisposedException) { return; }
 
-                _logger?.Log($"Client connected ({client.RemoteEndPoint})");
-                ClientConnected?.Invoke(client);
-
                 Clients.Add(client);
 
                 // Nagle Algorithm could cause the sync to be slightly off.
@@ -111,6 +108,9 @@ namespace ZyncAudio.Host
                     true,
                     (d, s) => { DataReceived?.Invoke(d, s); },
                     HandleSocketException);
+
+                _logger?.Log($"Client connected ({client.RemoteEndPoint})");
+                ClientConnected?.Invoke(client);
 
                 // Begin accepting other clients
                 _listener.BeginAccept(EndAccept, null);
