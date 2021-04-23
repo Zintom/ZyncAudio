@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Net.Sockets;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Zintom.Parcelize.Helpers;
@@ -257,6 +258,12 @@ namespace ZyncAudio.Host
 
             SocketServer.SendAll(ArrayHelpers.CombineArrays(BitConverter.GetBytes((int)(MessageIdentifier.Volume | MessageIdentifier.AudioProcessing)),
                                                             BitConverter.GetBytes(volume)));
+        }
+
+        public void ChangeNowPlayingInfo(string nowPlayingText)
+        {
+            SocketServer.SendAll(ArrayHelpers.CombineArrays(BitConverter.GetBytes((int)(MessageIdentifier.TrackInformation | MessageIdentifier.NotUrgent)),
+                                                            Encoding.UTF8.GetBytes(nowPlayingText)));
         }
 
         private void DataReceived(byte[] data, Socket client)
