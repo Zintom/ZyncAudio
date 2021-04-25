@@ -276,7 +276,7 @@ namespace ZyncAudio.Host
                 SocketServer.SendAll(ArrayHelpers.CombineArrays(BitConverter.GetBytes((int)(MessageIdentifier.AudioSamples | MessageIdentifier.AudioProcessing)),
                                                                 sampleBuffer));
 
-                Thread.Sleep(1000);
+                Thread.Sleep(990);
             }
         }
 
