@@ -39,6 +39,7 @@ namespace ZyncAudio
             this._unloadPlaylistBtn = new ZyncAudio.TintableButton();
             this._serverGroupBox = new System.Windows.Forms.GroupBox();
             this._mediaGroupBox = new System.Windows.Forms.GroupBox();
+            this._rerouteAudioBtn = new System.Windows.Forms.Button();
             this._searchSubFoldersBtn = new ZyncAudio.TintableButton();
             this._audioLevelsImg = new ZyncAudio.TintableButton();
             this._playBtn = new ZyncAudio.TintableButton();
@@ -48,7 +49,6 @@ namespace ZyncAudio
             this._stopBtn = new ZyncAudio.TintableButton();
             this._nextBtn = new ZyncAudio.TintableButton();
             this._toolTipProvider = new System.Windows.Forms.ToolTip(this.components);
-            this._rerouteAudioBtn = new System.Windows.Forms.Button();
             this._serverGroupBox.SuspendLayout();
             this._mediaGroupBox.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this._volumeControlBar)).BeginInit();
@@ -185,6 +185,17 @@ namespace ZyncAudio
             this._mediaGroupBox.TabIndex = 13;
             this._mediaGroupBox.TabStop = false;
             this._mediaGroupBox.Text = "Media";
+            // 
+            // _rerouteAudioBtn
+            // 
+            this._rerouteAudioBtn.Enabled = false;
+            this._rerouteAudioBtn.Location = new System.Drawing.Point(12, 323);
+            this._rerouteAudioBtn.Name = "_rerouteAudioBtn";
+            this._rerouteAudioBtn.Size = new System.Drawing.Size(164, 23);
+            this._rerouteAudioBtn.TabIndex = 18;
+            this._rerouteAudioBtn.Text = "Broadcast External Audio";
+            this._rerouteAudioBtn.UseVisualStyleBackColor = true;
+            this._rerouteAudioBtn.Click += new System.EventHandler(this.RerouteAudioBtn_Click);
             // 
             // _searchSubFoldersBtn
             // 
@@ -351,16 +362,6 @@ namespace ZyncAudio
             this._toolTipProvider.SetToolTip(this._nextBtn, "Play the next track in the playlist.");
             this._nextBtn.UseVisualStyleBackColor = false;
             this._nextBtn.Click += new System.EventHandler(this.NextBtn_Click);
-            // 
-            // _rerouteAudioBtn
-            // 
-            this._rerouteAudioBtn.Location = new System.Drawing.Point(12, 323);
-            this._rerouteAudioBtn.Name = "_rerouteAudioBtn";
-            this._rerouteAudioBtn.Size = new System.Drawing.Size(116, 23);
-            this._rerouteAudioBtn.TabIndex = 18;
-            this._rerouteAudioBtn.Text = "Re-route Audio";
-            this._rerouteAudioBtn.UseVisualStyleBackColor = true;
-            this._rerouteAudioBtn.Click += new System.EventHandler(this.RerouteAudioBtn_Click);
             // 
             // HostForm
             // 

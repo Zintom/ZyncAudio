@@ -154,6 +154,7 @@ namespace ZyncAudio
             _unloadPlaylistBtn.Enabled = true;
             _shuffleBtn.Enabled = true;
             _searchSubFoldersBtn.Enabled = true;
+            _rerouteAudioBtn.Enabled = true;
         }
 
         private void PingChecker_Tick(object sender, EventArgs e)
