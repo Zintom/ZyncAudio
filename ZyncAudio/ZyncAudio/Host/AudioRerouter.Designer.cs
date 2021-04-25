@@ -90,6 +90,7 @@ namespace ZyncAudio.Host
             this.ShowIcon = false;
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
             this.Text = "Audio Rerouter";
+            this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.AudioRerouter_FormClosing);
             this.Load += new System.EventHandler(this.Audio_Rerouter_Load);
             this.ResumeLayout(false);
             this.PerformLayout();

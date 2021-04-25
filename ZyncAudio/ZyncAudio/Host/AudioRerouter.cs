@@ -180,6 +180,7 @@ namespace ZyncAudio.Host
                 _rerouterFinished.WaitOne();
 
                 _selectedSourceID = null;
+                _audioServer.Stop();
                 return;
             }
 
@@ -194,6 +195,12 @@ namespace ZyncAudio.Host
 
             // Begin a new route on the newly selected device.
             ExecuteRerouteAsync();
+        }
+
+        private void AudioRerouter_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            _exitRerouterThread.Set();
+            _exitSilenceThread.Set();
         }
     }
 }
