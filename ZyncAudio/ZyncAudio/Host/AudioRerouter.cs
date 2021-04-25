@@ -86,6 +86,7 @@ namespace ZyncAudio.Host
         private void ExecuteRerouteAsync()
         {
             _audioServer.Stop();
+            _audioServer.ChangeNowPlayingInfo("Streaming live audio from the host machine.");
 
             new Thread(() =>
             {
