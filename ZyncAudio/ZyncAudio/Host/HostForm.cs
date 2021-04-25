@@ -3,15 +3,9 @@ using System.Diagnostics;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
-using System.Threading;
 using ZyncAudio.Host;
 using System.Windows.Forms;
 using Zintom.StorageFacility;
-using ZyncAudio.Extensions;
-using System.Drawing;
-using System.Diagnostics.CodeAnalysis;
-using NAudio.Wave;
-using NAudio.CoreAudioApi;
 
 namespace ZyncAudio
 {
