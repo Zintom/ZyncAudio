@@ -39,6 +39,7 @@ namespace ZyncAudio
             this._unloadPlaylistBtn = new ZyncAudio.TintableButton();
             this._serverGroupBox = new System.Windows.Forms.GroupBox();
             this._mediaGroupBox = new System.Windows.Forms.GroupBox();
+            this._rerouteAudioBtn = new System.Windows.Forms.Button();
             this._searchSubFoldersBtn = new ZyncAudio.TintableButton();
             this._audioLevelsImg = new ZyncAudio.TintableButton();
             this._playBtn = new ZyncAudio.TintableButton();
@@ -165,6 +166,7 @@ namespace ZyncAudio
             this._mediaGroupBox.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
+            this._mediaGroupBox.Controls.Add(this._rerouteAudioBtn);
             this._mediaGroupBox.Controls.Add(this._searchSubFoldersBtn);
             this._mediaGroupBox.Controls.Add(this._audioLevelsImg);
             this._mediaGroupBox.Controls.Add(this._playBtn);
@@ -183,6 +185,17 @@ namespace ZyncAudio
             this._mediaGroupBox.TabIndex = 13;
             this._mediaGroupBox.TabStop = false;
             this._mediaGroupBox.Text = "Media";
+            // 
+            // _rerouteAudioBtn
+            // 
+            this._rerouteAudioBtn.Enabled = false;
+            this._rerouteAudioBtn.Location = new System.Drawing.Point(12, 323);
+            this._rerouteAudioBtn.Name = "_rerouteAudioBtn";
+            this._rerouteAudioBtn.Size = new System.Drawing.Size(164, 23);
+            this._rerouteAudioBtn.TabIndex = 18;
+            this._rerouteAudioBtn.Text = "Broadcast External Audio";
+            this._rerouteAudioBtn.UseVisualStyleBackColor = true;
+            this._rerouteAudioBtn.Click += new System.EventHandler(this.RerouteAudioBtn_Click);
             // 
             // _searchSubFoldersBtn
             // 
@@ -392,5 +405,6 @@ namespace ZyncAudio
         private System.Windows.Forms.ToolTip _toolTipProvider;
         private TintableButton _audioLevelsImg;
         private TintableButton _searchSubFoldersBtn;
+        private System.Windows.Forms.Button _rerouteAudioBtn;
     }
 }

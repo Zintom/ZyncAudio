@@ -10,6 +10,8 @@ using Zintom.StorageFacility;
 using ZyncAudio.Extensions;
 using System.Drawing;
 using System.Diagnostics.CodeAnalysis;
+using NAudio.Wave;
+using NAudio.CoreAudioApi;
 
 namespace ZyncAudio
 {
@@ -152,6 +154,7 @@ namespace ZyncAudio
             _unloadPlaylistBtn.Enabled = true;
             _shuffleBtn.Enabled = true;
             _searchSubFoldersBtn.Enabled = true;
+            _rerouteAudioBtn.Enabled = true;
         }
 
         private void PingChecker_Tick(object sender, EventArgs e)
@@ -310,6 +313,11 @@ namespace ZyncAudio
         }
 
         private void SearchSubFoldersBtn_Click(object sender, EventArgs e) => _searchSubFoldersBtn.Checked = !_searchSubFoldersBtn.Checked;
+
+        private void RerouteAudioBtn_Click(object sender, EventArgs e)
+        {
+            new AudioRerouter(_audioServer).ShowDialog();
+        }
     }
 
     public class FormLogger : ILogger

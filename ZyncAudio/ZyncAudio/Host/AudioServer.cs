@@ -74,65 +74,161 @@ namespace ZyncAudio.Host
             }
         }
 
+        public bool PlayLiveAudioAsync(IWaveProvider waveProvider)
+        {
+            if (waveProvider == null) return false;
+
+            lock (_playOrStopLockObject)
+            {
+                if (_playbackState != PlaybackState.Stopped)
+                {
+                    return false;
+                }
+
+                _playbackState = PlaybackState.Playing;
+
+                new Thread(() => PlaySong(null, waveProvider, 0))
+                {
+                    Priority = ThreadPriority.AboveNormal
+                }.Start();
+                return true;
+            }
+        }
+
         private void PlaySong(string fileName, long startOffsetBytePosition)
         {
+            try
+            {
+                var reader = new AudioFileReader(fileName);
+                PlaySong(reader, reader, startOffsetBytePosition);
+            }
+            catch (FormatException)
+            {
+
+            }
+        }
+
+        private void PlaySong(WaveStream? waveStream, IWaveProvider waveProvider, long startOffsetBytePosition)
+        {
             PlaybackStarted?.Invoke();
+
+            bool isLiveAudio = waveStream == null;
 
             // Inform all clients to stop any audio they might be playing.
             SocketServer.SendAll(BitConverter.GetBytes((int)(MessageIdentifier.StopAudio | MessageIdentifier.AudioProcessing)));
 
-            AudioFileReader reader;
-            try
-            {
-                reader = new AudioFileReader(fileName);
-            }
-            catch (FormatException)
-            {
-                goto stopAudio;
-            }
-
-            #region Send the Wave Format information
-            byte[] waveFormatBytes = WaveFormatHelper.ToBytes(reader.WaveFormat);
+            // Send the Wave Format information
+            byte[] waveFormatBytes = WaveFormatHelper.ToBytes(waveProvider.WaveFormat);
             SocketServer.SendAll(ArrayHelpers.CombineArrays(BitConverter.GetBytes((int)(MessageIdentifier.WaveFormatInformation | MessageIdentifier.AudioProcessing)),
                                                             waveFormatBytes));
-            #endregion
 
-            #region Send Initial 4s of samples
-            int sampleBlockSize = reader.WaveFormat.GetBitrate() / 8; // The bitrate is the number of bits per second, so divide it by 8 to gets the bytes per second.
+            int byteRate = waveProvider.WaveFormat.GetBitrate() / 8; // The bitrate is the number of bits per second, so divide it by 8 to gets the bytes per second.
 
-            // Align the start position with the block size.
-            startOffsetBytePosition -= startOffsetBytePosition % reader.WaveFormat.BlockAlign;
-
-            // Read out the bytes which we wish to skip past (the start offset)
-            byte[] startOffsetBuffer = new byte[startOffsetBytePosition];
-            int startOffsetBytesRead = reader.Read(startOffsetBuffer, 0, startOffsetBuffer.Length);
-
-            // If we read less than what we requested then we have come
-            // to the end of the stream.
-            if(startOffsetBytesRead < startOffsetBuffer.Length)
+            if (!isLiveAudio)
             {
-                goto stopAudio;
+                // Send Initial 4s of samples
+                bool allSamplesUsed = SendUpFrontSamples(SocketServer, waveProvider, byteRate, 4, startOffsetBytePosition);
+
+                if (allSamplesUsed)
+                {
+                    goto stopAudio;
+                }
+            }
+            else
+            {
+                // If this is live audio then we need to wait just over 2 seconds for the 2 seconds of audio to become available.
+                Thread.Sleep(2500);
+                if (_stopPlayback) { goto stopAudio; }
+                SendUpFrontSamples(SocketServer, waveProvider, byteRate, 2, startOffsetBytePosition);
             }
 
-            //
-            // Send ~4 seconds of audio to get started.
-            //
-            byte[] initialSamples = new byte[sampleBlockSize * 4];
-            int initialBytesRead = reader.Read(initialSamples, 0, initialSamples.Length);
-            // Some tracks may be less than 4 seconds long so trim down the initial sample length down
-            // to what was actually read from the reader.
-            initialSamples = initialSamples.AsSpan(0, initialBytesRead).ToArray();
+            // Instruct clients to play in sync.
 
-            SocketServer.SendAll(ArrayHelpers.CombineArrays(BitConverter.GetBytes((int)(MessageIdentifier.AudioSamples | MessageIdentifier.AudioProcessing)),
-                                                            initialSamples));
-            #endregion
-
-            #region Instruct clients to play in sync.
             //
             // Wait until we have the latency values for every client.
             //
             Pinger.HasResponseFromAll.WaitOne();
 
+            SendSynchronisedPlayCommand();
+
+            Stopwatch playingTimeWatch = new();
+            playingTimeWatch.Start();
+
+            // Give clients a second to compose themselves as they have just started playing audio.
+            Thread.Sleep(250);
+            if (_stopPlayback) { goto stopAudio; }
+
+            #region Send Remaining Audio at 1 sample block per second.
+
+            SendSamplesUntilEnd(waveStream, waveProvider, byteRate);
+
+            #endregion
+
+            if (!_stopPlayback && !isLiveAudio)
+            {
+                // Wait for clients to finish playing.
+                while (playingTimeWatch.Elapsed < waveStream!.TotalTime)
+                {
+                    Thread.Sleep(250);
+                }
+            }
+
+            waveStream?.Dispose();
+
+        stopAudio:
+
+            SocketServer.SendAll(BitConverter.GetBytes((int)(MessageIdentifier.StopAudio | MessageIdentifier.AudioProcessing)));
+
+            // Reset state to stopped.
+            _playbackState = PlaybackState.Stopped;
+
+            // Inform waiting threads that playback has stopped.
+            _stoppedPlayback.Set();
+
+            if (!_stopPlayback)
+            {
+                // If there was no signal to stop the playback then it
+                // has stopped "naturally".
+                PlaybackStoppedNaturally?.Invoke();
+            }
+
+            _stopPlayback = false;
+        }
+
+        /// <returns><see langword="true"/> if all available samples have been used, or <see langword="false"/> if there are more available..</returns>
+        private static bool SendUpFrontSamples(ISocketServer server, IWaveProvider waveProvider, int byteRate, int secondsToSendUpFront, long startOffsetBytePosition)
+        {
+            // Align the start position with the block size.
+            startOffsetBytePosition -= startOffsetBytePosition % waveProvider.WaveFormat.BlockAlign;
+
+            // Read out the bytes which we wish to skip past (the start offset)
+            byte[] startOffsetBuffer = new byte[startOffsetBytePosition];
+            int startOffsetBytesRead = waveProvider.Read(startOffsetBuffer, 0, startOffsetBuffer.Length);
+
+            // If we read less than what we requested then we have come
+            // to the end of the stream.
+            if (startOffsetBytesRead < startOffsetBuffer.Length)
+            {
+                return true;
+            }
+
+            //
+            // Send secondsToSendUpFront seconds of audio to get started.
+            //
+            byte[] initialSamples = new byte[byteRate * secondsToSendUpFront];
+            int initialBytesRead = waveProvider.Read(initialSamples, 0, initialSamples.Length);
+            // Some tracks may be less than 4 seconds long so trim down the initial sample length down
+            // to what was actually read from the reader.
+            initialSamples = initialSamples.AsSpan(0, initialBytesRead).ToArray();
+
+            server.SendAll(ArrayHelpers.CombineArrays(BitConverter.GetBytes((int)(MessageIdentifier.AudioSamples | MessageIdentifier.AudioProcessing)),
+                                                            initialSamples));
+
+            return false;
+        }
+
+        private void SendSynchronisedPlayCommand()
+        {
             long highestLatency = Pinger.HighestPingClient / 2;
 
             List<KeyValuePair<Socket, long>> remainingClientsToSendTo = new();
@@ -141,7 +237,7 @@ namespace ZyncAudio.Host
                 remainingClientsToSendTo.Add(pair);
             }
 
-            // Give all clients 1 second to initialize their playback.
+            // Give all clients 1 seconds to initialize their playback.
             Thread.Sleep((int)highestLatency + 2000);
 
             Stopwatch watch = new Stopwatch();
@@ -168,67 +264,29 @@ namespace ZyncAudio.Host
             }
 
             watch.Stop();
+        }
 
-            #endregion
-
-            Stopwatch playingTimeWatch = new();
-            playingTimeWatch.Start();
-
-            // Give clients a second to compose themselves as they have just started playing audio.
-            Thread.Sleep(250);
-
-            #region Send Remaining Audio at 1 sample block per second.
-
-            byte[] sampleBuffer = new byte[sampleBlockSize];
+        private void SendSamplesUntilEnd(WaveStream? waveStream, IWaveProvider waveProvider, int byteRate)
+        {
+            byte[] sampleBuffer = new byte[byteRate];
             int bytesRead;
-            while ((bytesRead = reader.Read(sampleBuffer, 0, sampleBlockSize)) > 0 && !_stopPlayback)
+            while ((bytesRead = waveProvider.Read(sampleBuffer, 0, byteRate)) > 0 && !_stopPlayback)
             {
-                CurrentTrackPositionBytes = reader.Position;
+                sampleBuffer = sampleBuffer.AsSpan(0, bytesRead).ToArray();
+                CurrentTrackPositionBytes = waveStream?.Position ?? 0;
 
                 SocketServer.SendAll(ArrayHelpers.CombineArrays(BitConverter.GetBytes((int)(MessageIdentifier.AudioSamples | MessageIdentifier.AudioProcessing)),
                                                                 sampleBuffer));
 
                 Thread.Sleep(990);
             }
-
-            #endregion
-
-            if (!_stopPlayback)
-            {
-                // Wait for clients to finish playing.
-                while (playingTimeWatch.Elapsed < reader.TotalTime)
-                {
-                    Thread.Sleep(250);
-                }
-            }
-
-            reader.Dispose();
-
-        stopAudio:
-
-            SocketServer.SendAll(BitConverter.GetBytes((int)(MessageIdentifier.StopAudio | MessageIdentifier.AudioProcessing)));
-
-            // Inform waiting threads that playback has stopped.
-            _stoppedPlayback.Set();
-
-            // Reset state to stopped.
-            _playbackState = PlaybackState.Stopped;
-
-            if (!_stopPlayback)
-            {
-                // If there was no signal to stop the playback then it
-                // has stopped "naturally".
-                PlaybackStoppedNaturally?.Invoke();
-            }
-
-            _stopPlayback = false;
         }
 
         private volatile bool _stopPlayback = false;
         private readonly ManualResetEvent _stoppedPlayback = new ManualResetEvent(false);
 
         /// <summary>
-        /// Stops playback of the current track.
+        /// Stops playback of the current track if something is playing.
         /// </summary>
         public bool Stop()
         {
