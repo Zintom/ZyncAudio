@@ -10,6 +10,8 @@ using Zintom.StorageFacility;
 using ZyncAudio.Extensions;
 using System.Drawing;
 using System.Diagnostics.CodeAnalysis;
+using NAudio.Wave;
+using NAudio.CoreAudioApi;
 
 namespace ZyncAudio
 {
@@ -310,6 +312,11 @@ namespace ZyncAudio
         }
 
         private void SearchSubFoldersBtn_Click(object sender, EventArgs e) => _searchSubFoldersBtn.Checked = !_searchSubFoldersBtn.Checked;
+
+        private void RerouteAudioBtn_Click(object sender, EventArgs e)
+        {
+            new AudioRerouter(_audioServer).ShowDialog();
+        }
     }
 
     public class FormLogger : ILogger
