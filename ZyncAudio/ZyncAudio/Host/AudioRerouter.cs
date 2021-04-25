@@ -85,6 +85,8 @@ namespace ZyncAudio.Host
         /// </summary>
         private void ExecuteRerouteAsync()
         {
+            _audioServer.Stop();
+
             new Thread(() =>
             {
                 _rerouterFinished.Reset();
