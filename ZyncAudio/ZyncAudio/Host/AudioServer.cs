@@ -138,6 +138,7 @@ namespace ZyncAudio.Host
             {
                 // If this is live audio then we need to wait just over 2 seconds for the 2 seconds of audio to become available.
                 Thread.Sleep(2500);
+                if (_stopPlayback) { goto stopAudio; }
                 SendUpFrontSamples(SocketServer, waveProvider, byteRate, 2, startOffsetBytePosition);
             }
 
@@ -155,6 +156,7 @@ namespace ZyncAudio.Host
 
             // Give clients a second to compose themselves as they have just started playing audio.
             Thread.Sleep(250);
+            if (_stopPlayback) { goto stopAudio; }
 
             #region Send Remaining Audio at 1 sample block per second.
 
@@ -177,11 +179,11 @@ namespace ZyncAudio.Host
 
             SocketServer.SendAll(BitConverter.GetBytes((int)(MessageIdentifier.StopAudio | MessageIdentifier.AudioProcessing)));
 
-            // Inform waiting threads that playback has stopped.
-            _stoppedPlayback.Set();
-
             // Reset state to stopped.
             _playbackState = PlaybackState.Stopped;
+
+            // Inform waiting threads that playback has stopped.
+            _stoppedPlayback.Set();
 
             if (!_stopPlayback)
             {
@@ -284,7 +286,7 @@ namespace ZyncAudio.Host
         private readonly ManualResetEvent _stoppedPlayback = new ManualResetEvent(false);
 
         /// <summary>
-        /// Stops playback of the current track.
+        /// Stops playback of the current track if something is playing.
         /// </summary>
         public bool Stop()
         {
