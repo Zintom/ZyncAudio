@@ -30,6 +30,7 @@ namespace ZyncAudio
         private void InitializeComponent()
         {
             this.components = new System.ComponentModel.Container();
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(HostForm));
             this._closeEntryBtn = new System.Windows.Forms.Button();
             this.ClientListView = new System.Windows.Forms.ListView();
             this.PingChecker = new System.Windows.Forms.Timer(this.components);
@@ -39,7 +40,7 @@ namespace ZyncAudio
             this._unloadPlaylistBtn = new ZyncAudio.TintableButton();
             this._serverGroupBox = new System.Windows.Forms.GroupBox();
             this._mediaGroupBox = new System.Windows.Forms.GroupBox();
-            this._rerouteAudioBtn = new System.Windows.Forms.Button();
+            this._rerouteAudioBtn = new ZyncAudio.TintableButton();
             this._searchSubFoldersBtn = new ZyncAudio.TintableButton();
             this._audioLevelsImg = new ZyncAudio.TintableButton();
             this._playBtn = new ZyncAudio.TintableButton();
@@ -57,7 +58,6 @@ namespace ZyncAudio
             // _closeEntryBtn
             // 
             this._closeEntryBtn.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
-            this._closeEntryBtn.Enabled = false;
             this._closeEntryBtn.Location = new System.Drawing.Point(13, 414);
             this._closeEntryBtn.Name = "_closeEntryBtn";
             this._closeEntryBtn.Size = new System.Drawing.Size(112, 37);
@@ -88,7 +88,6 @@ namespace ZyncAudio
             this._playListView.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this._playListView.Enabled = false;
             this._playListView.FormattingEnabled = true;
             this._playListView.IntegralHeight = false;
             this._playListView.ItemHeight = 15;
@@ -115,7 +114,6 @@ namespace ZyncAudio
             this._loadFolderBtn.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Zoom;
             this._loadFolderBtn.Checked = false;
             this._loadFolderBtn.CheckedTint = System.Drawing.Color.Empty;
-            this._loadFolderBtn.Enabled = false;
             this._loadFolderBtn.FlatAppearance.BorderSize = 0;
             this._loadFolderBtn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this._loadFolderBtn.FlipEffect = System.Drawing.RotateFlipType.RotateNoneFlipNone;
@@ -135,7 +133,6 @@ namespace ZyncAudio
             this._unloadPlaylistBtn.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Zoom;
             this._unloadPlaylistBtn.Checked = false;
             this._unloadPlaylistBtn.CheckedTint = System.Drawing.Color.Empty;
-            this._unloadPlaylistBtn.Enabled = false;
             this._unloadPlaylistBtn.FlatAppearance.BorderSize = 0;
             this._unloadPlaylistBtn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this._unloadPlaylistBtn.FlipEffect = System.Drawing.RotateFlipType.RotateNoneFlipNone;
@@ -188,12 +185,19 @@ namespace ZyncAudio
             // 
             // _rerouteAudioBtn
             // 
-            this._rerouteAudioBtn.Enabled = false;
-            this._rerouteAudioBtn.Location = new System.Drawing.Point(12, 323);
+            this._rerouteAudioBtn.BackgroundImage = global::ZyncAudio.Properties.Resources.audio_8x;
+            this._rerouteAudioBtn.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Zoom;
+            this._rerouteAudioBtn.Checked = false;
+            this._rerouteAudioBtn.CheckedTint = System.Drawing.Color.Empty;
+            this._rerouteAudioBtn.FlatAppearance.BorderSize = 0;
+            this._rerouteAudioBtn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this._rerouteAudioBtn.FlipEffect = System.Drawing.RotateFlipType.RotateNoneFlipNone;
+            this._rerouteAudioBtn.Location = new System.Drawing.Point(15, 323);
             this._rerouteAudioBtn.Name = "_rerouteAudioBtn";
-            this._rerouteAudioBtn.Size = new System.Drawing.Size(164, 23);
+            this._rerouteAudioBtn.Size = new System.Drawing.Size(25, 25);
             this._rerouteAudioBtn.TabIndex = 18;
-            this._rerouteAudioBtn.Text = "Broadcast External Audio";
+            this._rerouteAudioBtn.Tint = System.Drawing.Color.Empty;
+            this._toolTipProvider.SetToolTip(this._rerouteAudioBtn, resources.GetString("_rerouteAudioBtn.ToolTip"));
             this._rerouteAudioBtn.UseVisualStyleBackColor = true;
             this._rerouteAudioBtn.Click += new System.EventHandler(this.RerouteAudioBtn_Click);
             // 
@@ -204,7 +208,6 @@ namespace ZyncAudio
             this._searchSubFoldersBtn.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Zoom;
             this._searchSubFoldersBtn.Checked = false;
             this._searchSubFoldersBtn.CheckedTint = System.Drawing.Color.FromArgb(((int)(((byte)(52)))), ((int)(((byte)(73)))), ((int)(((byte)(94)))));
-            this._searchSubFoldersBtn.Enabled = false;
             this._searchSubFoldersBtn.FlatAppearance.BorderSize = 0;
             this._searchSubFoldersBtn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this._searchSubFoldersBtn.FlipEffect = System.Drawing.RotateFlipType.RotateNoneFlipY;
@@ -224,7 +227,6 @@ namespace ZyncAudio
             this._audioLevelsImg.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Zoom;
             this._audioLevelsImg.Checked = false;
             this._audioLevelsImg.CheckedTint = System.Drawing.Color.Empty;
-            this._audioLevelsImg.Enabled = false;
             this._audioLevelsImg.FlatAppearance.BorderSize = 0;
             this._audioLevelsImg.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this._audioLevelsImg.FlipEffect = System.Drawing.RotateFlipType.RotateNoneFlipNone;
@@ -243,7 +245,6 @@ namespace ZyncAudio
             this._playBtn.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Zoom;
             this._playBtn.Checked = false;
             this._playBtn.CheckedTint = System.Drawing.Color.Empty;
-            this._playBtn.Enabled = false;
             this._playBtn.FlatAppearance.BorderSize = 0;
             this._playBtn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this._playBtn.FlipEffect = System.Drawing.RotateFlipType.RotateNoneFlipNone;
@@ -277,7 +278,6 @@ namespace ZyncAudio
             this._shuffleBtn.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Zoom;
             this._shuffleBtn.Checked = false;
             this._shuffleBtn.CheckedTint = System.Drawing.Color.Empty;
-            this._shuffleBtn.Enabled = false;
             this._shuffleBtn.FlatAppearance.BorderColor = System.Drawing.SystemColors.Control;
             this._shuffleBtn.FlatAppearance.BorderSize = 0;
             this._shuffleBtn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
@@ -300,7 +300,6 @@ namespace ZyncAudio
             this._previousBtn.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Zoom;
             this._previousBtn.Checked = false;
             this._previousBtn.CheckedTint = System.Drawing.Color.Empty;
-            this._previousBtn.Enabled = false;
             this._previousBtn.FlatAppearance.BorderSize = 0;
             this._previousBtn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this._previousBtn.FlipEffect = System.Drawing.RotateFlipType.RotateNoneFlipNone;
@@ -324,7 +323,6 @@ namespace ZyncAudio
             this._stopBtn.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Zoom;
             this._stopBtn.Checked = false;
             this._stopBtn.CheckedTint = System.Drawing.Color.Empty;
-            this._stopBtn.Enabled = false;
             this._stopBtn.FlatAppearance.BorderSize = 0;
             this._stopBtn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this._stopBtn.FlipEffect = System.Drawing.RotateFlipType.RotateNoneFlipNone;
@@ -347,7 +345,6 @@ namespace ZyncAudio
             this._nextBtn.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Zoom;
             this._nextBtn.Checked = false;
             this._nextBtn.CheckedTint = System.Drawing.Color.Empty;
-            this._nextBtn.Enabled = false;
             this._nextBtn.FlatAppearance.BorderSize = 0;
             this._nextBtn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this._nextBtn.FlipEffect = System.Drawing.RotateFlipType.RotateNoneFlipNone;
@@ -362,6 +359,12 @@ namespace ZyncAudio
             this._toolTipProvider.SetToolTip(this._nextBtn, "Play the next track in the playlist.");
             this._nextBtn.UseVisualStyleBackColor = false;
             this._nextBtn.Click += new System.EventHandler(this.NextBtn_Click);
+            // 
+            // _toolTipProvider
+            // 
+            this._toolTipProvider.AutoPopDelay = 8000;
+            this._toolTipProvider.InitialDelay = 500;
+            this._toolTipProvider.ReshowDelay = 100;
             // 
             // HostForm
             // 
@@ -405,6 +408,6 @@ namespace ZyncAudio
         private System.Windows.Forms.ToolTip _toolTipProvider;
         private TintableButton _audioLevelsImg;
         private TintableButton _searchSubFoldersBtn;
-        private System.Windows.Forms.Button _rerouteAudioBtn;
+        private TintableButton _rerouteAudioBtn;
     }
 }

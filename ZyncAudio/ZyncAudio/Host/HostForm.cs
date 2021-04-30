@@ -11,6 +11,14 @@ namespace ZyncAudio
 {
     public partial class HostForm : Form
     {
+
+        private enum GUIState
+        {
+            ServerOpenToEntry,
+            ServerEntryClosed,
+            AudioRerouterOpened
+        }
+
         private Server _server;
 
         private AudioServer _audioServer;
@@ -46,6 +54,8 @@ namespace ZyncAudio
             _volumeControlBar.Value = settings.Integers.GetValue("volumeSliderValue", 100);
             VolumeControlBar_Scroll(null!, null!);
             _searchSubFoldersBtn.Checked = settings.Booleans.GetValue("searchSubFoldersOnLoadFolder", false);
+
+            ChangeGUIState(GUIState.ServerOpenToEntry);
         }
 
         private void ClientConnected(Socket client)
@@ -80,6 +90,61 @@ namespace ZyncAudio
         private void HostForm_Load(object sender, EventArgs e)
         {
 
+        }
+
+        /// <summary>
+        /// Changes the GUI based upon the given <paramref name="state"/>
+        /// </summary>
+        private void ChangeGUIState(GUIState state)
+        {
+            switch (state)
+            {
+                case GUIState.ServerOpenToEntry:
+                    _closeEntryBtn.Enabled = true;
+                    _playBtn.Enabled = false;
+                    _stopBtn.Enabled = false;
+                    _previousBtn.Enabled = false;
+                    _nextBtn.Enabled = false;
+                    _playListView.Enabled = false;
+                    _loadFolderBtn.Enabled = false;
+                    _unloadPlaylistBtn.Enabled = false;
+                    _shuffleBtn.Enabled = false;
+                    _searchSubFoldersBtn.Enabled = false;
+                    _rerouteAudioBtn.Enabled = false;
+                    _audioLevelsImg.Enabled = false;
+                    _volumeControlBar.Enabled = false;
+                    break;
+                case GUIState.ServerEntryClosed:
+                    _closeEntryBtn.Enabled = false;
+                    _playBtn.Enabled = true;
+                    _stopBtn.Enabled = true;
+                    _previousBtn.Enabled = true;
+                    _nextBtn.Enabled = true;
+                    _playListView.Enabled = true;
+                    _loadFolderBtn.Enabled = true;
+                    _unloadPlaylistBtn.Enabled = true;
+                    _shuffleBtn.Enabled = true;
+                    _searchSubFoldersBtn.Enabled = true;
+                    _rerouteAudioBtn.Enabled = true;
+                    _audioLevelsImg.Enabled = true;
+                    _volumeControlBar.Enabled = true;
+                    break;
+                case GUIState.AudioRerouterOpened:
+                    _closeEntryBtn.Enabled = false;
+                    _playBtn.Enabled = false;
+                    _stopBtn.Enabled = false;
+                    _previousBtn.Enabled = false;
+                    _nextBtn.Enabled = false;
+                    _playListView.Enabled = false;
+                    _loadFolderBtn.Enabled = false;
+                    _unloadPlaylistBtn.Enabled = false;
+                    _shuffleBtn.Enabled = false;
+                    _searchSubFoldersBtn.Enabled = false;
+                    _rerouteAudioBtn.Enabled = false;
+                    _audioLevelsImg.Enabled = true;
+                    _volumeControlBar.Enabled = true;
+                    break;
+            }
         }
 
         private bool _paused = true;
@@ -137,18 +202,19 @@ namespace ZyncAudio
         private void CloseEntryBtn_Click(object sender, EventArgs e)
         {
             _server.StopAccepting();
-            _closeEntryBtn.Enabled = false;
+            ChangeGUIState(GUIState.ServerEntryClosed);
+            //_closeEntryBtn.Enabled = false;
 
-            _playBtn.Enabled = true;
-            _stopBtn.Enabled = true;
-            _previousBtn.Enabled = true;
-            _nextBtn.Enabled = true;
-            _playListView.Enabled = true;
-            _loadFolderBtn.Enabled = true;
-            _unloadPlaylistBtn.Enabled = true;
-            _shuffleBtn.Enabled = true;
-            _searchSubFoldersBtn.Enabled = true;
-            _rerouteAudioBtn.Enabled = true;
+            //_playBtn.Enabled = true;
+            //_stopBtn.Enabled = true;
+            //_previousBtn.Enabled = true;
+            //_nextBtn.Enabled = true;
+            //_playListView.Enabled = true;
+            //_loadFolderBtn.Enabled = true;
+            //_unloadPlaylistBtn.Enabled = true;
+            //_shuffleBtn.Enabled = true;
+            //_searchSubFoldersBtn.Enabled = true;
+            //_rerouteAudioBtn.Enabled = true;
         }
 
         private void PingChecker_Tick(object sender, EventArgs e)
@@ -310,7 +376,15 @@ namespace ZyncAudio
 
         private void RerouteAudioBtn_Click(object sender, EventArgs e)
         {
-            new AudioRerouter(_audioServer).ShowDialog();
+            ChangeGUIState(GUIState.AudioRerouterOpened);
+
+            var routerForm = new AudioRerouter(_audioServer);
+            routerForm.Owner = this;
+            routerForm.FormClosed += (o, e) =>
+            {
+                ChangeGUIState(GUIState.ServerEntryClosed);
+            };
+            routerForm.Show(this);
         }
     }
 

@@ -57,6 +57,12 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
+  <data name="_rerouteAudioBtn.ToolTip" xml:space="preserve">
+    <value>Broadcast the output of a specific device, such as a Virtual Audio Cable, or Speakers.
+
+This way you could synchronously broadcast apps like Spotify or iTunes by setting them to
+output to a specific virtual audio cable.</value>
+  </data>
   <metadata name="$this.TrayHeight" type="System.Int32, System.Private.CoreLib, Version=5.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e">
     <value>65</value>
   </metadata>
