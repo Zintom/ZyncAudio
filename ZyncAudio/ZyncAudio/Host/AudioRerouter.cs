@@ -143,7 +143,7 @@ namespace ZyncAudio.Host
                 capture.StartRecording();
 
                 // Wait for 2 seconds of captured audio to become available.
-                Thread.Sleep(2000);
+                Thread.Sleep(2500);
                 _audioServer.PlayLiveAudioAsync(bufferedProvider, 2);
 
                 // Re-route until we are told to stop.
