@@ -30,7 +30,6 @@ namespace ZyncAudio.Host
 
         public Pinger Pinger { get; private init; }
 
-        public event Action? PlaybackStarted;
         public event Action? PlaybackStoppedNaturally;
 
         public long CurrentTrackPositionBytes { get; set; } = 0L;
@@ -111,8 +110,6 @@ namespace ZyncAudio.Host
 
         private void PlaySong(WaveStream? waveStream, IWaveProvider waveProvider, long startOffsetBytePosition, int upFrontSampleSecondsToSend = 4)
         {
-            PlaybackStarted?.Invoke();
-
             // Inform all clients to stop any audio they might be playing.
             SocketServer.SendAll(BitConverter.GetBytes((int)(MessageIdentifier.StopAudio | MessageIdentifier.AudioProcessing)));
 
