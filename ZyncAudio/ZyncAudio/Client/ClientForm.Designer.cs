@@ -97,7 +97,6 @@ namespace ZyncAudio
             // 
             // _nowPlayingBarAnimator
             // 
-            this._nowPlayingBarAnimator.Enabled = true;
             this._nowPlayingBarAnimator.Interval = 32;
             this._nowPlayingBarAnimator.Tick += new System.EventHandler(this.NowPlayingBarTick);
             // 
