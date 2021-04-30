@@ -44,6 +44,7 @@ namespace ZyncAudio.Host
             Pinger = new Pinger(SocketServer);
 
             _handlers.Add(MessageIdentifier.Response | MessageIdentifier.Ping, Pinger.PingResponse);
+            _handlers.Add(MessageIdentifier.Request | MessageIdentifier.AudioSamples, HandleSampleRequest);
 
             Pinger.Start();
         }
@@ -74,7 +75,7 @@ namespace ZyncAudio.Host
             }
         }
 
-        public bool PlayLiveAudioAsync(IWaveProvider waveProvider)
+        public bool PlayLiveAudioAsync(IWaveProvider waveProvider, int upFrontSampleSecondsToSend)
         {
             if (waveProvider == null) return false;
 
@@ -87,7 +88,7 @@ namespace ZyncAudio.Host
 
                 _playbackState = PlaybackState.Playing;
 
-                new Thread(() => PlaySong(null, waveProvider, 0))
+                new Thread(() => PlaySong(null, waveProvider, 0, upFrontSampleSecondsToSend))
                 {
                     Priority = ThreadPriority.AboveNormal
                 }.Start();
@@ -108,11 +109,9 @@ namespace ZyncAudio.Host
             }
         }
 
-        private void PlaySong(WaveStream? waveStream, IWaveProvider waveProvider, long startOffsetBytePosition)
+        private void PlaySong(WaveStream? waveStream, IWaveProvider waveProvider, long startOffsetBytePosition, int upFrontSampleSecondsToSend = 4)
         {
             PlaybackStarted?.Invoke();
-
-            bool isLiveAudio = waveStream == null;
 
             // Inform all clients to stop any audio they might be playing.
             SocketServer.SendAll(BitConverter.GetBytes((int)(MessageIdentifier.StopAudio | MessageIdentifier.AudioProcessing)));
@@ -124,22 +123,12 @@ namespace ZyncAudio.Host
 
             int byteRate = waveProvider.WaveFormat.GetBitrate() / 8; // The bitrate is the number of bits per second, so divide it by 8 to gets the bytes per second.
 
-            if (!isLiveAudio)
-            {
-                // Send Initial 4s of samples
-                bool allSamplesUsed = SendUpFrontSamples(SocketServer, waveProvider, byteRate, 4, startOffsetBytePosition);
+            // Send intial samples of audio
+            bool allSamplesUsed = SendUpFrontSamples(SocketServer, waveProvider, byteRate, upFrontSampleSecondsToSend, startOffsetBytePosition);
 
-                if (allSamplesUsed)
-                {
-                    goto stopAudio;
-                }
-            }
-            else
+            if (allSamplesUsed || _stopPlayback)
             {
-                // If this is live audio then we need to wait just over 2 seconds for the 2 seconds of audio to become available.
-                Thread.Sleep(2500);
-                if (_stopPlayback) { goto stopAudio; }
-                SendUpFrontSamples(SocketServer, waveProvider, byteRate, 2, startOffsetBytePosition);
+                goto stopAudio;
             }
 
             // Instruct clients to play in sync.
@@ -164,10 +153,10 @@ namespace ZyncAudio.Host
 
             #endregion
 
-            if (!_stopPlayback && !isLiveAudio)
+            if (!_stopPlayback && waveStream != null)
             {
                 // Wait for clients to finish playing.
-                while (playingTimeWatch.Elapsed < waveStream!.TotalTime)
+                while (playingTimeWatch.Elapsed < waveStream.TotalTime)
                 {
                     Thread.Sleep(250);
                 }
@@ -268,17 +257,32 @@ namespace ZyncAudio.Host
 
         private void SendSamplesUntilEnd(WaveStream? waveStream, IWaveProvider waveProvider, int byteRate)
         {
+            Stopwatch elapsedSinceLastSend = new Stopwatch();
+            elapsedSinceLastSend.Start();
+
+            double bytesPerMillisecond = byteRate / 1000d;
+
+            // Initial size is 1 second large
             byte[] sampleBuffer = new byte[byteRate];
             int bytesRead;
-            while ((bytesRead = waveProvider.Read(sampleBuffer, 0, byteRate)) > 0 && !_stopPlayback)
+            while ((bytesRead = waveProvider.Read(sampleBuffer, 0, sampleBuffer.Length - (sampleBuffer.Length % waveProvider.WaveFormat.BlockAlign))) > 0 && !_stopPlayback)
             {
+                // Trim the buffer to be exactly the length of the amount
+                // of bytes read.
                 sampleBuffer = sampleBuffer.AsSpan(0, bytesRead).ToArray();
                 CurrentTrackPositionBytes = waveStream?.Position ?? 0;
 
                 SocketServer.SendAll(ArrayHelpers.CombineArrays(BitConverter.GetBytes((int)(MessageIdentifier.AudioSamples | MessageIdentifier.AudioProcessing)),
                                                                 sampleBuffer));
+                elapsedSinceLastSend.Restart();
 
-                Thread.Sleep(990);
+                Thread.Sleep(1000);
+
+                // Thread.Sleep is inaccurate, so ensure that we are
+                // sending exactly 1000 milliseconds of samples per 1000 milliseconds elapsed
+                sampleBuffer = new byte[(int)(bytesPerMillisecond * elapsedSinceLastSend.ElapsedMilliseconds)];
+
+                Debug.WriteLine($"Server sent {sampleBuffer.Length / (double)byteRate} seconds of audio.");
             }
         }
 
@@ -322,6 +326,11 @@ namespace ZyncAudio.Host
         {
             SocketServer.SendAll(ArrayHelpers.CombineArrays(BitConverter.GetBytes((int)(MessageIdentifier.TrackInformation | MessageIdentifier.NotUrgent)),
                                                             Encoding.UTF8.GetBytes(nowPlayingText)));
+        }
+
+        private void HandleSampleRequest(byte[] _, Socket client)
+        {
+
         }
 
         private void DataReceived(byte[] data, Socket client)
