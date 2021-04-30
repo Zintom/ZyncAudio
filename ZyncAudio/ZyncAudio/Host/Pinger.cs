@@ -1,11 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Net;
-using System.Net.NetworkInformation;
 using System.Net.Sockets;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -18,7 +14,7 @@ namespace ZyncAudio.Host
 
         private readonly ISocketServer _socketServer;
 
-        private Dictionary<Socket, Stopwatch> _pingWatches = new();
+        private readonly Dictionary<Socket, Stopwatch> _pingWatches = new();
 
         public Dictionary<Socket, long> PingStatistics { get; } = new();
 
@@ -27,7 +23,10 @@ namespace ZyncAudio.Host
         /// </summary>
         public ManualResetEvent HasResponseFromAll { get; } = new ManualResetEvent(false);
 
-        public long HighestPingClient
+        /// <summary>
+        /// Gets the ping time of the slowest client.
+        /// </summary>
+        public long HighestPing
         {
             get
             {
@@ -41,6 +40,14 @@ namespace ZyncAudio.Host
                 }
                 return highestPing;
             }
+        }
+
+        /// <summary>
+        /// Gets the latency time of the slowest client.
+        /// </summary>
+        public long HighestLatency
+        {
+            get => HighestPing / 2;
         }
 
         public Pinger(ISocketServer socketServer)
@@ -70,7 +77,7 @@ namespace ZyncAudio.Host
         /// <summary>
         /// Call when a response to a ping is received.
         /// </summary>
-        public void PingResponse(byte[] _, Socket client)
+        public void PingResponseReceived(byte[] _, Socket client)
         {
             var watch = _pingWatches[client];
             watch.Stop();
