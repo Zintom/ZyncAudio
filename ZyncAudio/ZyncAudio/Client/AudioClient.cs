@@ -144,12 +144,15 @@ namespace ZyncAudio
                 // able to create our BufferedWaveProvider.
                 if (_lastWaveFormatReceived == null) { throw new Exception("Wave Format information was not received prior to samples being received."); }
 
-                _bufferedWaveProvider = new BufferedWaveProvider(_lastWaveFormatReceived);
-
-                int sampleBlockSize = _lastWaveFormatReceived.GetBitrate() / 8;
+                _bufferedWaveProvider = new BufferedWaveProvider(_lastWaveFormatReceived)
+                {
+                    BufferDuration = TimeSpan.FromSeconds(30),
+                    ReadFully = false
+                };
+                //int sampleBlockSize = _lastWaveFormatReceived.GetBitrate() / 8;
 
                 // 30 second audio buffer.
-                _bufferedWaveProvider.BufferLength = sampleBlockSize * 30;
+                //_bufferedWaveProvider.BufferLength = sampleBlockSize * 30;
 
                 _waveOut.Init(_bufferedWaveProvider);
             }
