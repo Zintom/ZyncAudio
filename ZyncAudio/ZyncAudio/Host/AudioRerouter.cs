@@ -31,7 +31,11 @@ namespace ZyncAudio.Host
 
         private void Audio_Rerouter_Load(object sender, EventArgs e)
         {
-
+            if (Owner != null)
+            {
+                this.Left = Owner.Left + Owner.Width / 2 - this.Width / 2;
+                this.Top = Owner.Top + Owner.Height / 2 - this.Height / 2;
+            }
         }
 
         /// <summary>
@@ -57,6 +61,7 @@ namespace ZyncAudio.Host
                     }
                 })
                 {
+                    Name = "SilenceProvider Thread",
                     Priority = ThreadPriority.BelowNormal,
                     IsBackground = true
                 }.Start();
@@ -64,9 +69,9 @@ namespace ZyncAudio.Host
         }
 
         /// <summary>
-        /// Gets a thread specific <see cref="MMDevice"/> by its ID.
+        /// Gets a <see cref="MMDevice"/> by its ID.
         /// </summary>
-        /// <remarks>An <see cref="MMDevice"/> cannot be used cross-thread.</remarks>
+        /// <remarks><b>Warning! </b>An <see cref="MMDevice"/> cannot be used cross-thread.</remarks>
         private static MMDevice? GetMMDeviceByID(string targetID)
         {
             foreach (var device in new MMDeviceEnumerator().EnumerateAudioEndPoints(DataFlow.Render, DeviceState.Active))
@@ -117,7 +122,8 @@ namespace ZyncAudio.Host
 
                 var bufferedProvider = new BufferedWaveProvider(capture.WaveFormat)
                 {
-                    BufferDuration = TimeSpan.FromSeconds(30)
+                    BufferDuration = TimeSpan.FromSeconds(30),
+                    ReadFully = false
                 };
 
                 long timeSinceLastUpdate = 0;
@@ -135,7 +141,10 @@ namespace ZyncAudio.Host
 
                 // Begin capturing data from the audio device.
                 capture.StartRecording();
-                _audioServer.PlayLiveAudioAsync(bufferedProvider);
+
+                // Wait for 2 seconds of captured audio to become available.
+                Thread.Sleep(2000);
+                _audioServer.PlayLiveAudioAsync(bufferedProvider, 2);
 
                 // Re-route until we are told to stop.
                 _exitRerouterThread.WaitOne();
@@ -148,6 +157,7 @@ namespace ZyncAudio.Host
                 _rerouterFinished.Set();
             })
             {
+                Name = "Audio Rerouter Thread",
                 IsBackground = true
             }.Start();
         }

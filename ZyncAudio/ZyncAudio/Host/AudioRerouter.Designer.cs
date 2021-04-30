@@ -88,7 +88,7 @@ namespace ZyncAudio.Host
             this.MinimizeBox = false;
             this.Name = "AudioRerouter";
             this.ShowIcon = false;
-            this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
+            this.StartPosition = System.Windows.Forms.FormStartPosition.Manual;
             this.Text = "Audio Rerouter";
             this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.AudioRerouter_FormClosing);
             this.Load += new System.EventHandler(this.Audio_Rerouter_Load);
