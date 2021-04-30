@@ -149,6 +149,7 @@ namespace ZyncAudio
                     BufferDuration = TimeSpan.FromSeconds(30),
                     ReadFully = false
                 };
+
                 //int sampleBlockSize = _lastWaveFormatReceived.GetBitrate() / 8;
 
                 // 30 second audio buffer.
