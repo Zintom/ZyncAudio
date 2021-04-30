@@ -5,7 +5,6 @@ using System.Diagnostics;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 using Zintom.Parcelize.Helpers;
 using ZyncAudio.Extensions;
 
@@ -42,7 +41,7 @@ namespace ZyncAudio.Host
 
             Pinger = new Pinger(SocketServer);
 
-            _handlers.Add(MessageIdentifier.Response | MessageIdentifier.Ping, Pinger.PingResponse);
+            _handlers.Add(MessageIdentifier.Response | MessageIdentifier.Ping, Pinger.PingResponseReceived);
             _handlers.Add(MessageIdentifier.Request | MessageIdentifier.AudioSamples, HandleSampleRequest);
 
             Pinger.Start();
@@ -130,11 +129,12 @@ namespace ZyncAudio.Host
 
             // Instruct clients to play in sync.
 
-            //
             // Wait until we have the latency values for every client.
-            //
             Pinger.HasResponseFromAll.WaitOne();
 
+            // Give all clients 1 seconds to initialize their playback.
+            Thread.Sleep((int)Pinger.HighestLatency + 2000);
+            // Send sync'd command.
             SendSynchronisedPlayCommand();
 
             Stopwatch playingTimeWatch = new();
@@ -144,11 +144,7 @@ namespace ZyncAudio.Host
             Thread.Sleep(250);
             if (_stopPlayback) { goto stopAudio; }
 
-            #region Send Remaining Audio at 1 sample block per second.
-
             SendSamplesUntilEnd(waveStream, waveProvider, byteRate);
-
-            #endregion
 
             if (!_stopPlayback && waveStream != null)
             {
@@ -215,16 +211,13 @@ namespace ZyncAudio.Host
 
         private void SendSynchronisedPlayCommand()
         {
-            long highestLatency = Pinger.HighestPingClient / 2;
+            long highestLatency = Pinger.HighestLatency;
 
             List<KeyValuePair<Socket, long>> remainingClientsToSendTo = new();
             foreach (var pair in Pinger.PingStatistics)
             {
                 remainingClientsToSendTo.Add(pair);
             }
-
-            // Give all clients 1 seconds to initialize their playback.
-            Thread.Sleep((int)highestLatency + 2000);
 
             Stopwatch watch = new Stopwatch();
             watch.Start();
@@ -271,15 +264,17 @@ namespace ZyncAudio.Host
 
                 SocketServer.SendAll(ArrayHelpers.CombineArrays(BitConverter.GetBytes((int)(MessageIdentifier.AudioSamples | MessageIdentifier.AudioProcessing)),
                                                                 sampleBuffer));
+                Debug.WriteLine($"Server sent {sampleBuffer.Length / (double)byteRate} seconds of audio.");
                 elapsedSinceLastSend.Restart();
 
                 Thread.Sleep(1000);
 
                 // Thread.Sleep is inaccurate, so ensure that we are
                 // sending exactly 1000 milliseconds of samples per 1000 milliseconds elapsed
-                sampleBuffer = new byte[(int)(bytesPerMillisecond * elapsedSinceLastSend.ElapsedMilliseconds)];
-
-                Debug.WriteLine($"Server sent {sampleBuffer.Length / (double)byteRate} seconds of audio.");
+                // We also block align this (by adding not subtracting) so that we don't get tiny fractures in the audio.
+                int newBufferSize = (int)(bytesPerMillisecond * elapsedSinceLastSend.ElapsedMilliseconds);
+                Debug.WriteLine($"Sample re-alignment {newBufferSize % waveProvider.WaveFormat.BlockAlign} bytes.");
+                sampleBuffer = new byte[newBufferSize + (newBufferSize % waveProvider.WaveFormat.BlockAlign)];
             }
         }
 
