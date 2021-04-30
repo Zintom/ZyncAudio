@@ -47,7 +47,6 @@ namespace ZyncAudio
             _server.ClientConnected = ClientConnected;
             _server.ClientDisconnected = ClientDisconnected;
 
-            _audioServer.PlaybackStarted += RefreshNowPlaying;
             _audioServer.PlaybackStoppedNaturally += PlaybackStoppedNaturally;
 
             var settings = Storage.GetStorage(Program.SettingsFile);
@@ -165,6 +164,8 @@ namespace ZyncAudio
                     SetPausedState(true, _audioServer.CurrentTrackPositionBytes);
                     _audioServer.Stop();
                 }
+
+                RefreshNowPlaying();
             }
         }
 
@@ -296,6 +297,7 @@ namespace ZyncAudio
                 }
 
                 SetPausedState(false);
+                RefreshNowPlaying();
             }
         }
 
@@ -313,6 +315,8 @@ namespace ZyncAudio
                 }
 
                 SetPausedState(false);
+
+                RefreshNowPlaying();
             }
         }
 
@@ -325,6 +329,7 @@ namespace ZyncAudio
                 _audioServer.PlayAsync(_playlist.Current);
 
                 SetPausedState(false);
+                RefreshNowPlaying();
             }
         }
 
@@ -340,10 +345,10 @@ namespace ZyncAudio
             }
 
             _playListView.Invoke(new Action(() =>
-            {
-                if (_playlist.Position < 0 || _playlist.Position >= _playListView.Items.Count) { return; }
-                _playListView.SelectedIndex = _playlist.Position;
-            }));
+                    {
+                        if (_playlist.Position < 0 || _playlist.Position >= _playListView.Items.Count) { return; }
+                        _playListView.SelectedIndex = _playlist.Position;
+                    }));
         }
 
         private void ShuffleBtnClicked(object sender, EventArgs e)
@@ -383,6 +388,7 @@ namespace ZyncAudio
             routerForm.FormClosed += (o, e) =>
             {
                 ChangeGUIState(GUIState.ServerEntryClosed);
+                _audioServer.ChangeNowPlayingInfo(Program.NoAudioPlaying);
             };
             routerForm.Show(this);
         }
