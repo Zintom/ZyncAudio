@@ -107,7 +107,7 @@ namespace ZyncAudio.Host
             }
         }
 
-        private void PlaySong(WaveStream? waveStream, IWaveProvider waveProvider, long startOffsetBytePosition, int upFrontSampleSecondsToSend = 4)
+        private void PlaySong(WaveStream? waveStream, IWaveProvider waveProvider, long startOffsetBytePosition, int upFrontSampleSecondsToSend = 2)
         {
             // Inform all clients to stop any audio they might be playing.
             SocketServer.SendAll(BitConverter.GetBytes((int)(MessageIdentifier.StopAudio | MessageIdentifier.AudioProcessing)));
@@ -247,35 +247,51 @@ namespace ZyncAudio.Host
 
         private void SendSamplesUntilEnd(WaveStream? waveStream, IWaveProvider waveProvider, int byteRate)
         {
-            Stopwatch elapsedSinceLastSend = new Stopwatch();
-            elapsedSinceLastSend.Start();
+            Stopwatch elapsed = new Stopwatch();
+            elapsed.Start();
 
             double bytesPerMillisecond = byteRate / 1000d;
 
-            // Initial size is 1 second large
-            byte[] sampleBuffer = new byte[byteRate];
-            int bytesRead;
-            while ((bytesRead = waveProvider.Read(sampleBuffer, 0, sampleBuffer.Length - (sampleBuffer.Length % waveProvider.WaveFormat.BlockAlign))) > 0 && !_stopPlayback)
+            // Stores an estimate of how many samples the clients have available to them.
+            long numberOfSamplesClientsHave = 0;
+            while (!_stopPlayback)
             {
-                // Trim the buffer to be exactly the length of the amount
-                // of bytes read.
-                sampleBuffer = sampleBuffer.AsSpan(0, bytesRead).ToArray();
-                CurrentTrackPositionBytes = waveStream?.Position ?? 0;
+                // Estimate the amount of bytes that have been consumed by the clients, Elapsed Milliseconds * Bytes Per Millisecond.
+                numberOfSamplesClientsHave -= (long)(bytesPerMillisecond * elapsed.ElapsedMilliseconds);
 
-                SocketServer.SendAll(ArrayHelpers.CombineArrays(BitConverter.GetBytes((int)(MessageIdentifier.AudioSamples | MessageIdentifier.AudioProcessing)),
-                                                                sampleBuffer));
-                Debug.WriteLine($"Server sent {sampleBuffer.Length / (double)byteRate} seconds of audio.");
-                elapsedSinceLastSend.Restart();
+                // Ensure the estimation never goes below zero.
+                numberOfSamplesClientsHave = Math.Clamp(numberOfSamplesClientsHave, 0, long.MaxValue);
+                elapsed.Restart();
 
-                Thread.Sleep(1000);
+                // If there are less than 2 seconds of samples available then send out some more.
+                if (numberOfSamplesClientsHave < byteRate * 2)
+                {
+                    // Send 4 seconds of samples (or the maximum number available).
+                    byte[] sampleBuffer = new byte[byteRate * 4 - (byteRate % waveProvider.WaveFormat.BlockAlign)];
 
-                // Thread.Sleep is inaccurate, so ensure that we are
-                // sending exactly 1000 milliseconds of samples per 1000 milliseconds elapsed
-                // We also block align this (by adding not subtracting) so that we don't get tiny fractures in the audio.
-                int newBufferSize = (int)(bytesPerMillisecond * elapsedSinceLastSend.ElapsedMilliseconds);
-                Debug.WriteLine($"Sample re-alignment {newBufferSize % waveProvider.WaveFormat.BlockAlign} bytes.");
-                sampleBuffer = new byte[newBufferSize + (newBufferSize % waveProvider.WaveFormat.BlockAlign)];
+                    int bytesRead = waveProvider.Read(sampleBuffer, 0, sampleBuffer.Length);
+
+                    // If there are no samples left to be read then quit.
+                    if (bytesRead == 0)
+                    {
+                        break;
+                    }
+
+                    // Trim the buffer to be exactly the length of the amount of bytes read.
+                    sampleBuffer = sampleBuffer.AsSpan(0, bytesRead).ToArray();
+                    CurrentTrackPositionBytes = waveStream?.Position ?? 0;
+
+                    SocketServer.SendAll(ArrayHelpers.CombineArrays(BitConverter.GetBytes((int)(MessageIdentifier.AudioSamples | MessageIdentifier.AudioProcessing)),
+                                                                    sampleBuffer));
+
+                    // Increment our estimation of how many bytes the clients have.
+                    numberOfSamplesClientsHave += sampleBuffer.Length;
+                }
+
+                Thread.Sleep(750);
             }
+
+            elapsed.Stop();
         }
 
         private volatile bool _stopPlayback = false;
