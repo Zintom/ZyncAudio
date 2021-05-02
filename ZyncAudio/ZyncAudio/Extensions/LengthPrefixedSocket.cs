@@ -1,9 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Net.Sockets;
-using System.Text;
 using System.Threading.Tasks;
 using Zintom.Parcelize.Helpers;
 
@@ -12,12 +9,12 @@ namespace ZyncAudio.Extensions
     public static class LengthPrefixedSocket
     {
 
-        public static void SendLengthPrefixed(this Socket socket, byte[] data, Action<SocketException, Socket>? exceptionThrown)
+        public static void SendLengthPrefixed(this Socket socket, byte[] data, Action<Exception, Socket>? exceptionThrown)
         {
             SendLengthPrefixed<object>(socket, data, exceptionThrown, null);
         }
 
-        public static void SendLengthPrefixed<T>(this Socket socket, byte[] data, Action<SocketException, Socket>? exceptionThrown, TaskCompletionSource<T>? taskCompletionSource)
+        public static void SendLengthPrefixed<T>(this Socket socket, byte[] data, Action<Exception, Socket>? exceptionThrown, TaskCompletionSource<T>? taskCompletionSource)
         {
             byte[] lengthPrefixed = ArrayHelpers.CombineArrays(BitConverter.GetBytes(data.Length), data);
 
@@ -51,7 +48,7 @@ namespace ZyncAudio.Extensions
         /// <param name="continuousReceive">Whether we should begin receiving after a sucessful receive (continuously).</param>
         /// <param name="dataReceiveComplete"></param>
         /// <param name="socketExceptionThrown"></param>
-        public static void BeginReceiveLengthPrefixed(this Socket socket, bool continuousReceive, Action<byte[], Socket>? dataReceiveComplete, Action<SocketException, Socket>? socketExceptionThrown)
+        public static void BeginReceiveLengthPrefixed(this Socket socket, bool continuousReceive, Action<byte[], Socket>? dataReceiveComplete, Action<Exception, Socket>? socketExceptionThrown)
         {
             var state = new StateObject(socket, new byte[4], dataReceiveComplete, socketExceptionThrown)
             {
@@ -67,6 +64,11 @@ namespace ZyncAudio.Extensions
             {
                 state.BytesRead += state.WorkerSocket.EndReceive(ar);
 
+                // The other end has disconnected.
+                if (state.BytesRead == 0)
+                {
+                    throw new Exception("The connection has closed.");
+                }
 
                 if (state.BytesRead < state.Buffer.Length)
                 {
@@ -84,13 +86,13 @@ namespace ZyncAudio.Extensions
 
                 state.WorkerSocket.BeginReceive(state.Buffer, 0, LengthToReceive, SocketFlags.None, EndReceiveData, state);
             }
-            catch (SocketException e)
+            catch (ObjectDisposedException)
+            {
+                Debug.WriteLine("An object disposed exception was caught when trying to receive from a socket.");
+            }
+            catch (Exception e)
             {
                 state.SocketExceptionThrown?.Invoke(e, state.WorkerSocket);
-            }
-            catch (ObjectDisposedException e)
-            {
-                Debug.WriteLine(e.Message);
             }
         }
 
@@ -100,6 +102,12 @@ namespace ZyncAudio.Extensions
             try
             {
                 state.BytesRead += state.WorkerSocket.EndReceive(ar);
+
+                // The other end has disconnected.
+                if (state.BytesRead == 0)
+                {
+                    throw new Exception("The connection has closed.");
+                }
 
                 if (state.BytesRead < state.Buffer.Length)
                 {
@@ -119,14 +127,14 @@ namespace ZyncAudio.Extensions
                     state.WorkerSocket.BeginReceive(state.Buffer, 0, state.Buffer.Length, SocketFlags.None, EndReceivePrefix, state);
                 }
             }
-            catch (SocketException e)
+            catch (ObjectDisposedException)
+            {
+                Debug.WriteLine("An object disposed exception was caught when trying to receive from a socket.");
+            }
+            catch (Exception e)
             {
                 // Send exception back to caller.
                 state.SocketExceptionThrown?.Invoke(e, state.WorkerSocket);
-            }
-            catch (ObjectDisposedException e)
-            {
-                Debug.WriteLine(e.Message);
             }
         }
 
@@ -142,10 +150,10 @@ namespace ZyncAudio.Extensions
             internal byte[] Buffer;
             internal int BytesRead;
 
-            internal Action<SocketException, Socket>? SocketExceptionThrown;
+            internal Action<Exception, Socket>? SocketExceptionThrown;
             internal Action<byte[], Socket>? DataReceiveComplete;
 
-            internal StateObject(Socket socket, byte[] buffer, Action<byte[], Socket>? dataReceiveCompleteDelegate, Action<SocketException, Socket>? socketExceptionThrown)
+            internal StateObject(Socket socket, byte[] buffer, Action<byte[], Socket>? dataReceiveCompleteDelegate, Action<Exception, Socket>? socketExceptionThrown)
             {
                 WorkerSocket = socket;
                 Buffer = buffer;
