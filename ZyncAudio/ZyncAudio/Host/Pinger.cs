@@ -98,7 +98,10 @@ namespace ZyncAudio.Host
         {
             while (_running)
             {
-                foreach (var client in _socketServer.Clients)
+                // Make a local copy of the client list in case it is modified during enumeration.
+                Socket[] clients = _socketServer.Clients.ToArray();
+
+                foreach (var client in clients)
                 {
                     // Initialize a stopwatch for this client if it does not exist.
                     if (!_pingWatches.TryGetValue(client, out Stopwatch? watch))
