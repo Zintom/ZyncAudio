@@ -37,7 +37,7 @@ namespace ZyncAudio.Host
         {
             SocketServer = socketServer;
             SocketServer.DataReceived = DataReceived;
-            SocketServer.SocketError = SocketError;
+            SocketServer.ConnectionProblem = SocketError;
 
             Pinger = new Pinger(SocketServer);
 
@@ -355,7 +355,7 @@ namespace ZyncAudio.Host
             }
         }
 
-        private void SocketError(SocketException exception, Socket client)
+        private void SocketError(Exception exception, Socket client)
         {
 
         }
