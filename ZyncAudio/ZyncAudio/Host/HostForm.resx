@@ -57,6 +57,34 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
+  <assembly alias="System.Drawing.Common" name="System.Drawing.Common, Version=5.0.0.1, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51" />
+  <data name="_rerouteAudioBtn.BackgroundImage" type="System.Drawing.Bitmap, System.Drawing.Common" mimetype="application/x-microsoft.net.object.bytearray.base64">
+    <value>
+        iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAABGdBTUEAALGPC/xhBQAAAAlwSFlzAAAL
+        EQAACxEBf2RfkQAABOFJREFUeF7t2leo5VQUxvFjr9gL9oJYwIoFfbCLbcSuIIKoqIiooCgIiqAigi+K
+        D4ovig+CIKIiFsbesWDFXh4sWMDeFcv/y9x12Dd3Za8k54zsy+SDHzM3nLVnJ5OTXXJHQ4YMGTJkyJAo
+        S838uURmPzyFNaqf5keWw+3Yp/ppguyMH/EvXsJ8uAg6+buhPqvvOodeWR+fQQ2Z0i+CTv4epH3+HBug
+        U5bG40gbMqVeBJ38vfD6/AyWRetcAq8hU9pFWB5NJ2+uQKtsi9/hNZJ6AqXkDnh9TP2FnRDmEXgNpHSB
+        DkApOQR/wutr6jlkczi8wrqTUFpOg9fXuhPRmJfhFaWuQ6m5CV6fU+9AD/k5ORBeQepN6IFTalbEu/D6
+        njoGc2KThyb/YC+Unn3h9T+lIX5WNOnRU9L7sNGTtk1OxxaL/jrVaDJzzqK/hrkL3jmktsI458L7kNH/
+        /naIciz02Y+xkQ5MKevgLagvp+pAkO2hftTPI3UpxnkY3ofMg4iyGX6A1ei7uB4mjSZcr8La/RVt/jMe
+        gtV4XkSVlRBNfI5HlAdQr3sda6FvVsXzqLerqW0U9blel/obVd/2njnQRFdcFymX/eHViq70auga/Zua
+        bXptytHIRSPCz/BqzREYXZAc8LS5/e+HV2uexspoGw210S38LKLcB6/WVOuDW5IDnsuQy4bQ7eTVmrex
+        OtpGF+sFeG2ltkYuF8OrMxotRk8mBzzVbZLJmfDqjC7OLuiaLfEbvDbNRcjlIHh15jWMPkwOeLQ6zOVW
+        eHXmTvRNNLXV5kcuGpm8OvMNRt8lBzzRAyy6VduMIE3RitNr07yPXLQJ4tUZ3Z3hDDDaEf4EXp2ZNePq
+        GA1TXptGT/koP8GrNe5BU12hIF/DqzXrom908b02jWZ7Ub6FV2vCO2AZ5PIpvDozybpAI4fXpvkFUaK5
+        QPgMWBu5RHsIh6FvtPr02jRac+QSPQOqOygaBaJ9NL2A8OrMDeibK+G1aTT9ziUaBfT1yE435QTkcj68
+        OvM91kTXrIIv4LVpLkcu0TxAGzzhTPAa5KLZmFeXug1dozvHayu1O3LRRMmrM9U84sLkgEfz+Ch6T+DV
+        Gj1nNGVuG90xX8Fry3yAKNG7gqsRbiFplIhegpwCr1Y0Du+JrtkRuSHsPOSiBZW912xS7Q1q4fHHzIEm
+        2nLORU9bbzNSS2m9Xe6bPeCdhCZfWu7msgD1upRGgPGGTdN7QNNmA6L+wNFFPRSTRvsVGu/Tto9DFK1B
+        0pq6aiFkiZ4DshuiXA99Vl8bd+u5Zw6G7Vpp8RVlU0QTvKswjgqiTUQ9UKLoq6DNkZOrn6abI/EYoltf
+        uRHeOaR2wKxEG6PS5jcuFuev07RpextE7wlfwZzoe+V9OKWt6ZLfDCmPwut76gzMiRY90bRYrkWpid5v
+        yJdo/BrppYNXlNKz4iiUFg2ZbX6vQZvAjdFd8Aa8wpSWmLuilGyOaN0gWj2ugGw0M4xGBNELi1KyEF4f
+        66J3CePcDK8Bo724ab77mzSb4CN4fTXVFnjbaCmqk/QaKu3kLbmLoK+HXrB2iiYK9SmoTr7Lqu7/ji5C
+        fSTTjLD3b4zqO2Nvfd5DySdv2RjpRTgbE+UsaKU3H07eYhehWu9PI23m36WlzzbckCFDhgwZMmTIkCUk
+        o9F/oujretzAUmIAAAAASUVORK5CYII=
+</value>
+  </data>
   <data name="_rerouteAudioBtn.ToolTip" xml:space="preserve">
     <value>Broadcast the output of a specific device, such as a Virtual Audio Cable, or Speakers.
 

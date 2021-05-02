@@ -185,7 +185,8 @@ namespace ZyncAudio
             // 
             // _rerouteAudioBtn
             // 
-            this._rerouteAudioBtn.BackgroundImage = global::ZyncAudio.Properties.Resources.audio_8x;
+            this._rerouteAudioBtn.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this._rerouteAudioBtn.BackgroundImage = ((System.Drawing.Image)(resources.GetObject("_rerouteAudioBtn.BackgroundImage")));
             this._rerouteAudioBtn.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Zoom;
             this._rerouteAudioBtn.Checked = false;
             this._rerouteAudioBtn.CheckedTint = System.Drawing.Color.Empty;
