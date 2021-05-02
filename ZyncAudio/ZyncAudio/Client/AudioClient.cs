@@ -58,7 +58,6 @@ namespace ZyncAudio
 
             SocketClient = socketClient;
             SocketClient.DataReceived = DataReceived;
-            SocketClient.SocketError = SocketError;
 
             _handlers.Add(MessageIdentifier.WaveFormatInformation |
                           MessageIdentifier.AudioProcessing, HandleWaveFormatInformation);
@@ -212,11 +211,6 @@ namespace ZyncAudio
             Span<byte> nowPlayingText = data.AsSpan(sizeof(int));
 
             TrackInformationChanged?.Invoke(Encoding.UTF8.GetString(nowPlayingText));
-        }
-
-        private void SocketError(SocketException exception, Socket client)
-        {
-
         }
     }
 }
