@@ -28,6 +28,12 @@ namespace ZyncAudio
             }
             set
             {
+                if (value == null)
+                {
+                    base.BackgroundImage = null;
+                    return;
+                }
+
                 _originalImage = (Bitmap)value.Clone();
                 base.BackgroundImage = value;
                 ApplyTint();
@@ -42,7 +48,7 @@ namespace ZyncAudio
         {
             get
             {
-                return (Checked && CheckedTint == Color.Empty) || (!Checked && Tint == Color.Empty) && Enabled;
+                return (Checked && CheckedTint == Color.Empty) || (!Checked && Tint == Color.Empty) && Enabled && base.BackgroundImage != null;
             }
         }
 
@@ -87,6 +93,8 @@ namespace ZyncAudio
             get => _flipEffect;
             set
             {
+                if (base.BackgroundImage == null) return;
+
                 Bitmap flipped = (Bitmap)base.BackgroundImage;
                 flipped.RotateFlip(value);
                 _flipEffect = value;
@@ -104,6 +112,8 @@ namespace ZyncAudio
         /// </summary>
         private void ApplyTint()
         {
+            if (base.BackgroundImage == null) return;
+
             if (!Enabled)
             {
                 ((Bitmap)base.BackgroundImage).Tint(Color.Gray);

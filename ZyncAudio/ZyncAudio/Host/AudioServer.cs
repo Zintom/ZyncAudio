@@ -37,7 +37,7 @@ namespace ZyncAudio.Host
         {
             SocketServer = socketServer;
             SocketServer.DataReceived = DataReceived;
-            SocketServer.SocketError = SocketError;
+            SocketServer.ConnectionProblem = SocketError;
 
             Pinger = new Pinger(SocketServer);
 
@@ -254,13 +254,15 @@ namespace ZyncAudio.Host
 
             // Stores an estimate of how many samples the clients have available to them.
             long numberOfSamplesClientsHave = 0;
-            while (!_stopPlayback)
+            do
             {
+                Debug.WriteLine("numberOfSamplesClientsHave: " + numberOfSamplesClientsHave);
+
                 // Estimate the amount of bytes that have been consumed by the clients, Elapsed Milliseconds * Bytes Per Millisecond.
                 numberOfSamplesClientsHave -= (long)(bytesPerMillisecond * elapsed.ElapsedMilliseconds);
 
                 // Ensure the estimation never goes below zero.
-                numberOfSamplesClientsHave = Math.Clamp(numberOfSamplesClientsHave, 0, long.MaxValue);
+                numberOfSamplesClientsHave = Math.Max(0, numberOfSamplesClientsHave);
                 elapsed.Restart();
 
                 // If there are less than 2 seconds of samples available then send out some more.
@@ -271,10 +273,13 @@ namespace ZyncAudio.Host
 
                     int bytesRead = waveProvider.Read(sampleBuffer, 0, sampleBuffer.Length);
 
-                    // If there are no samples left to be read then quit.
+                    // If there are no samples left to be read go to exit condition check.
                     if (bytesRead == 0)
                     {
-                        break;
+                        // Don't burn out the CPU cycles for no reason as this is
+                        // a hot path when a song is coming to an end (no samples left but numberOfSamplesClientsHave > 0).
+                        Thread.Sleep(500);
+                        continue;
                     }
 
                     // Trim the buffer to be exactly the length of the amount of bytes read.
@@ -289,7 +294,7 @@ namespace ZyncAudio.Host
                 }
 
                 Thread.Sleep(750);
-            }
+            } while (!_stopPlayback && numberOfSamplesClientsHave > 0);
 
             elapsed.Stop();
         }
@@ -355,7 +360,7 @@ namespace ZyncAudio.Host
             }
         }
 
-        private void SocketError(SocketException exception, Socket client)
+        private void SocketError(Exception exception, Socket client)
         {
 
         }

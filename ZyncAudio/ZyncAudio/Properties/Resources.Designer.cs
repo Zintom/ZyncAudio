@@ -93,6 +93,16 @@ namespace ZyncAudio.Properties {
         /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Bitmap.
         /// </summary>
+        internal static System.Drawing.Bitmap globe_8x {
+            get {
+                object obj = ResourceManager.GetObject("globe_8x", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
         internal static System.Drawing.Bitmap loop_circular_8x {
             get {
                 object obj = ResourceManager.GetObject("loop_circular_8x", resourceCulture);
