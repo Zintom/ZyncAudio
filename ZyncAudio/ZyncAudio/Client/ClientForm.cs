@@ -8,6 +8,12 @@ namespace ZyncAudio
 {
     public partial class ClientForm : Form
     {
+        private enum GUIState
+        {
+            NotConnected,
+            Connected
+        }
+
         Client _client;
         AudioClient _audioClient;
 
@@ -22,7 +28,9 @@ namespace ZyncAudio
 
             _logger = new ConsoleLogger();
             _client = new Client();
-            _client.SocketError = HandleSocketError;
+            _client.Connected = OnConnected;
+            _client.Disconnected = OnDisconnection;
+            _client.ConnectionProblem = OnConnectionProblem;
             _audioClient = new AudioClient(_client, _logger);
             _audioClient.TrackInformationChanged += UpdateTrackInformationText;
 
@@ -38,7 +46,26 @@ namespace ZyncAudio
             _hostBtn.Enabled = false;
 
             _host = new HostForm();
+            _host.FormClosing += (o, e) =>
+            {
+                _hostBtn.Enabled = true;
+            };
             _host.Show();
+        }
+
+        private void ChangeGUIState(GUIState state)
+        {
+            switch (state)
+            {
+                case GUIState.NotConnected:
+                    _connectToggle = false;
+                    _connectBtn.Text = "Connect";
+                    break;
+                case GUIState.Connected:
+                    _connectToggle = true;
+                    _connectBtn.Text = "Disconnect";
+                    break;
+            }
         }
 
         private void ClientForm_Activated(object sender, EventArgs e)
@@ -46,30 +73,52 @@ namespace ZyncAudio
 
         }
 
-        public void HandleSocketError(SocketException e, Socket _)
+        private void OnConnected()
         {
-            MessageBox.Show(caption: nameof(SocketException), text: e.Message);
+            Invoke(new Action(() =>
+            {
+                _connectBtn.Enabled = true;
+                ChangeGUIState(GUIState.Connected);
+            }));
+        }
+
+        private void OnDisconnection()
+        {
+            Invoke(new Action(() =>
+            {
+                _connectBtn.Enabled = true;
+                ChangeGUIState(GUIState.NotConnected);
+            }));
+        }
+
+        private void OnConnectionProblem(Exception e, Socket _)
+        {
+            OnDisconnection();
+            Invoke(new Action(() =>
+            {
+                MessageBox.Show(caption: "Client", text: e.Message);
+            }));
         }
 
         private bool _connectToggle = false;
         private void ConnectBtn_Click(object sender, EventArgs e)
         {
+            _connectBtn.Enabled = false;
+
             if (_connectToggle)
             {
-                if (_client.Disconnect())
+                if (!_client.Disconnect())
                 {
-                    _connectToggle = !_connectToggle;
-                    _connectBtn.Text = "Connect";
+                    _connectBtn.Enabled = true;
                 }
 
                 _audioClient.Disconnect();
             }
             else
             {
-                if (_client.Connect(IPAddress.Parse(_ipAddressInputBox.Text), 60759))
+                if (!_client.Connect(IPAddress.Parse(_ipAddressInputBox.Text), 60759))
                 {
-                    _connectToggle = !_connectToggle;
-                    _connectBtn.Text = "Disconnect";
+                    _connectBtn.Enabled = true;
                 }
             }
         }
