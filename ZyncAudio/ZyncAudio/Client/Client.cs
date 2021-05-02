@@ -11,7 +11,17 @@ namespace ZyncAudio
     {
         Action<byte[], Socket>? DataReceived { get; set; }
 
-        Action<SocketException, Socket>? SocketError { get; set; }
+        Action<Exception, Socket>? ConnectionProblem { get; set; }
+
+        /// <summary>
+        /// Occurs when the client disconnects from the server.
+        /// </summary>
+        Action? Disconnected { get; set; }
+
+        /// <summary>
+        /// Occurs when the client connected to the server.
+        /// </summary>
+        Action? Connected { get; set; }
 
         /// <summary>
         /// Attempts to connect to the target machine so long as the client is not already connecting or connected.
@@ -50,7 +60,11 @@ namespace ZyncAudio
 
         public Action<byte[], Socket>? DataReceived { get; set; }
 
-        public Action<SocketException, Socket>? SocketError { get; set; }
+        public Action<Exception, Socket>? ConnectionProblem { get; set; }
+
+        public Action? Disconnected { get; set; }
+
+        public Action? Connected { get; set; }
 
         private readonly object _stateChangeLockObject = new();
 
@@ -87,18 +101,20 @@ namespace ZyncAudio
                 {
                     _workerSocket!.EndConnect(ar);
                 }
-                catch (SocketException e) when (e.SocketErrorCode == System.Net.Sockets.SocketError.ConnectionRefused)
+                catch (SocketException e)
                 {
-                    SocketError?.Invoke(e, _workerSocket!);
+                    ConnectionProblem?.Invoke(e, _workerSocket!);
                     Disconnect();
                     return;
                 }
+
+                Connected?.Invoke();
 
                 // Nagle Algorithm could cause the sync to be slightly off.
                 _workerSocket.NoDelay = true;
 
                 // Begin receive loop
-                _workerSocket.BeginReceiveLengthPrefixed(true, DataReceived, SocketError);
+                _workerSocket.BeginReceiveLengthPrefixed(true, DataReceived, HandleSocketError);
             }
         }
 
@@ -117,8 +133,17 @@ namespace ZyncAudio
                 _workerSocket?.Dispose();
                 _workerSocket = null;
 
+                Disconnected?.Invoke();
+
                 return true;
             }
+        }
+
+        private void HandleSocketError(Exception e, Socket client)
+        {
+            Disconnect();
+            Disconnected?.Invoke();
+            ConnectionProblem?.Invoke(e, client);
         }
 
         public void Send(byte[] data)
@@ -128,7 +153,7 @@ namespace ZyncAudio
 
         public void Send<T>(byte[] data, TaskCompletionSource<T>? taskCompletionSource)
         {
-            _workerSocket.SendLengthPrefixed(data, SocketError, taskCompletionSource);
+            _workerSocket?.SendLengthPrefixed(data, ConnectionProblem, taskCompletionSource);
         }
     }
 }
