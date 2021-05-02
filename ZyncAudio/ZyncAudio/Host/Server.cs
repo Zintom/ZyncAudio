@@ -10,7 +10,7 @@ namespace ZyncAudio.Host
     {
         Action<byte[], Socket>? DataReceived { get; set; }
 
-        Action<SocketException, Socket>? SocketError { get; set; }
+        Action<Exception, Socket>? ConnectionProblem { get; set; }
 
         Action<Socket>? ClientConnected { get; set; }
 
@@ -52,7 +52,7 @@ namespace ZyncAudio.Host
 
         public Action<byte[], Socket>? DataReceived { get; set; }
 
-        public Action<SocketException, Socket>? SocketError { get; set; }
+        public Action<Exception, Socket>? ConnectionProblem { get; set; }
 
         public Action<Socket>? ClientConnected { get; set; }
 
@@ -127,9 +127,11 @@ namespace ZyncAudio.Host
                 StopAccepting();
                 for (int i = 0; i < Clients.Count; i++)
                 {
-                    Clients[i].Shutdown(SocketShutdown.Both);
-                    Clients[i].Disconnect(false);
-                    Clients[i].Dispose();
+                    var client = Clients[i];
+                    client.Shutdown(SocketShutdown.Both);
+                    client.Close();
+                    client.Dispose();
+
                     Clients.RemoveAt(i);
                     i--;
                 }
@@ -157,13 +159,18 @@ namespace ZyncAudio.Host
             }
         }
 
-        private void HandleSocketException(SocketException e, Socket client)
+        private void HandleSocketException(Exception e, Socket client)
         {
-            Clients.Remove(client);
-            ClientDisconnected?.Invoke(client);
-            _logger?.Log($"Client forcefully disconnected ({client.RemoteEndPoint})");
+            lock (_stateChangeLockObject)
+            {
+                if (_connectionState == ConnectionState.Closed) return;
 
-            SocketError?.Invoke(e, client);
+                Clients.Remove(client);
+                ClientDisconnected?.Invoke(client);
+                _logger?.Log($"Client forcefully disconnected ({client.RemoteEndPoint})");
+
+                ConnectionProblem?.Invoke(e, client);
+            }
         }
     }
 }
