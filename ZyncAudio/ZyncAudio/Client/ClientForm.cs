@@ -44,6 +44,7 @@ namespace ZyncAudio
         private void HostButton_Click(object sender, EventArgs e)
         {
             _hostBtn.Enabled = false;
+            _offScreen.Select();
 
             _host = new HostForm();
             _host.FormClosing += (o, e) =>
@@ -60,6 +61,8 @@ namespace ZyncAudio
                 case GUIState.NotConnected:
                     _connectToggle = false;
                     _connectBtn.Text = "Connect";
+                    _nowPlayingBarAnimator.Enabled = false;
+                    _nowPlayingBarText.Text = Program.NoAudioPlaying;
                     break;
                 case GUIState.Connected:
                     _connectToggle = true;
@@ -104,6 +107,7 @@ namespace ZyncAudio
         private void ConnectBtn_Click(object sender, EventArgs e)
         {
             _connectBtn.Enabled = false;
+            _offScreen.Select();
 
             if (_connectToggle)
             {
