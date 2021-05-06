@@ -6,6 +6,8 @@
     <UseWindowsForms>true</UseWindowsForms>
     <Nullable>enable</Nullable>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <Authors>Zintom</Authors>
+    <Description>Enables computers to play audio synchronously.</Description>
   </PropertyGroup>
 
   <ItemGroup>
@@ -13,7 +15,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="NAudio" Version="2.0.0" />
+    <PackageReference Include="NAudio.Core" Version="2.0.0" />
+    <PackageReference Include="NAudio.Wasapi" Version="2.0.0" />
+    <PackageReference Include="NAudio.WinMM" Version="2.0.0" />
     <PackageReference Include="Parcelize" Version="1.0.2" />
     <PackageReference Include="StorageFacility" Version="1.3.7" />
   </ItemGroup>
