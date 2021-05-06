@@ -43,7 +43,7 @@ namespace ZyncAudio
                 lock (_workQueueFinishedLocker)
                 {
                     // If the work queue is confirmed as Empty, then halt the loop until work becomes available.
-                    if (_workQueue.IsEmpty)
+                    if (_workQueue.IsEmpty && !_stopPump)
                     {
                         _waitForWorkSignal.Reset();
                     }
