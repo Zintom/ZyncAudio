@@ -1,11 +1,9 @@
 ﻿using NAudio.Wave;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 using ZyncAudio.Extensions;
 using static ZyncAudio.WorkPump;
 
