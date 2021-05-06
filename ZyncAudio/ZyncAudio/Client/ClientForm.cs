@@ -14,10 +14,9 @@ namespace ZyncAudio
             Connected
         }
 
-        Client _client;
-        AudioClient _audioClient;
-
-        ILogger _logger;
+        private readonly Client _client;
+        private readonly AudioClient _audioClient;
+        private readonly ILogger _logger;
 
         HostForm? _host;
 
@@ -27,10 +26,12 @@ namespace ZyncAudio
             _nowPlayingBarText.Text = Program.NoAudioPlaying;
 
             _logger = new ConsoleLogger();
-            _client = new Client();
-            _client.Connected = OnConnected;
-            _client.Disconnected = OnDisconnection;
-            _client.ConnectionProblem = OnConnectionProblem;
+            _client = new Client
+            {
+                Connected = OnConnected,
+                Disconnected = OnDisconnection,
+                ConnectionProblem = OnConnectionProblem
+            };
             _audioClient = new AudioClient(_client, _logger);
             _audioClient.TrackInformationChanged += UpdateTrackInformationText;
 

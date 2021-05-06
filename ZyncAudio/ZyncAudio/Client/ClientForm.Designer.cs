@@ -145,7 +145,6 @@ namespace ZyncAudio
         #endregion
         private TintableButton _hostBtn;
         private System.Windows.Forms.Button _connectBtn;
-        private IPAddressTextBox ipAddressTextBox1;
         private IPAddressTextBox _ipAddressInputBox;
         private System.Windows.Forms.Panel panel1;
         private System.Windows.Forms.Label _nowPlayingBarText;
