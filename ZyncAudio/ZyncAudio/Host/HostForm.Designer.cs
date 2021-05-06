@@ -40,6 +40,7 @@ namespace ZyncAudio
             this._unloadPlaylistBtn = new ZyncAudio.TintableButton();
             this._serverGroupBox = new System.Windows.Forms.GroupBox();
             this._mediaGroupBox = new System.Windows.Forms.GroupBox();
+            this._addSingleTrackBtn = new ZyncAudio.TintableButton();
             this._rerouteAudioBtn = new ZyncAudio.TintableButton();
             this._searchSubFoldersBtn = new ZyncAudio.TintableButton();
             this._audioLevelsImg = new ZyncAudio.TintableButton();
@@ -110,19 +111,19 @@ namespace ZyncAudio
             // _loadFolderBtn
             // 
             this._loadFolderBtn.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-            this._loadFolderBtn.BackgroundImage = global::ZyncAudio.Properties.Resources.plus_8x;
+            this._loadFolderBtn.BackgroundImage = global::ZyncAudio.Properties.Resources.folder_8x;
             this._loadFolderBtn.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Zoom;
             this._loadFolderBtn.Checked = false;
             this._loadFolderBtn.CheckedTint = System.Drawing.Color.Empty;
             this._loadFolderBtn.FlatAppearance.BorderSize = 0;
             this._loadFolderBtn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this._loadFolderBtn.FlipEffect = System.Drawing.RotateFlipType.RotateNoneFlipNone;
-            this._loadFolderBtn.Location = new System.Drawing.Point(277, 326);
+            this._loadFolderBtn.Location = new System.Drawing.Point(247, 326);
             this._loadFolderBtn.Name = "_loadFolderBtn";
             this._loadFolderBtn.Size = new System.Drawing.Size(25, 25);
             this._loadFolderBtn.TabIndex = 7;
             this._loadFolderBtn.Tint = System.Drawing.Color.FromArgb(((int)(((byte)(52)))), ((int)(((byte)(73)))), ((int)(((byte)(94)))));
-            this._toolTipProvider.SetToolTip(this._loadFolderBtn, "Load a new folder of music.");
+            this._toolTipProvider.SetToolTip(this._loadFolderBtn, "Add a folder of tracks to the playlist.");
             this._loadFolderBtn.UseVisualStyleBackColor = true;
             this._loadFolderBtn.Click += new System.EventHandler(this.LoadFolderBtn_Click);
             // 
@@ -136,7 +137,7 @@ namespace ZyncAudio
             this._unloadPlaylistBtn.FlatAppearance.BorderSize = 0;
             this._unloadPlaylistBtn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this._unloadPlaylistBtn.FlipEffect = System.Drawing.RotateFlipType.RotateNoneFlipNone;
-            this._unloadPlaylistBtn.Location = new System.Drawing.Point(311, 326);
+            this._unloadPlaylistBtn.Location = new System.Drawing.Point(313, 326);
             this._unloadPlaylistBtn.Name = "_unloadPlaylistBtn";
             this._unloadPlaylistBtn.Size = new System.Drawing.Size(25, 25);
             this._unloadPlaylistBtn.TabIndex = 10;
@@ -163,6 +164,7 @@ namespace ZyncAudio
             this._mediaGroupBox.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
+            this._mediaGroupBox.Controls.Add(this._addSingleTrackBtn);
             this._mediaGroupBox.Controls.Add(this._rerouteAudioBtn);
             this._mediaGroupBox.Controls.Add(this._searchSubFoldersBtn);
             this._mediaGroupBox.Controls.Add(this._audioLevelsImg);
@@ -182,6 +184,25 @@ namespace ZyncAudio
             this._mediaGroupBox.TabIndex = 13;
             this._mediaGroupBox.TabStop = false;
             this._mediaGroupBox.Text = "Media";
+            // 
+            // _addSingleTrackBtn
+            // 
+            this._addSingleTrackBtn.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+            this._addSingleTrackBtn.BackgroundImage = global::ZyncAudio.Properties.Resources.file_8x;
+            this._addSingleTrackBtn.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Zoom;
+            this._addSingleTrackBtn.Checked = false;
+            this._addSingleTrackBtn.CheckedTint = System.Drawing.Color.Empty;
+            this._addSingleTrackBtn.FlatAppearance.BorderSize = 0;
+            this._addSingleTrackBtn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this._addSingleTrackBtn.FlipEffect = System.Drawing.RotateFlipType.RotateNoneFlipNone;
+            this._addSingleTrackBtn.Location = new System.Drawing.Point(282, 326);
+            this._addSingleTrackBtn.Name = "_addSingleTrackBtn";
+            this._addSingleTrackBtn.Size = new System.Drawing.Size(25, 25);
+            this._addSingleTrackBtn.TabIndex = 19;
+            this._addSingleTrackBtn.Tint = System.Drawing.Color.FromArgb(((int)(((byte)(52)))), ((int)(((byte)(73)))), ((int)(((byte)(94)))));
+            this._toolTipProvider.SetToolTip(this._addSingleTrackBtn, "Add a track to the current playlist.");
+            this._addSingleTrackBtn.UseVisualStyleBackColor = true;
+            this._addSingleTrackBtn.Click += new System.EventHandler(this.AddSingleTrackBtn_Clicked);
             // 
             // _rerouteAudioBtn
             // 
@@ -212,7 +233,7 @@ namespace ZyncAudio
             this._searchSubFoldersBtn.FlatAppearance.BorderSize = 0;
             this._searchSubFoldersBtn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this._searchSubFoldersBtn.FlipEffect = System.Drawing.RotateFlipType.RotateNoneFlipY;
-            this._searchSubFoldersBtn.Location = new System.Drawing.Point(246, 326);
+            this._searchSubFoldersBtn.Location = new System.Drawing.Point(215, 326);
             this._searchSubFoldersBtn.Name = "_searchSubFoldersBtn";
             this._searchSubFoldersBtn.Size = new System.Drawing.Size(25, 25);
             this._searchSubFoldersBtn.TabIndex = 17;
@@ -410,5 +431,6 @@ namespace ZyncAudio
         private TintableButton _audioLevelsImg;
         private TintableButton _searchSubFoldersBtn;
         private TintableButton _rerouteAudioBtn;
+        private TintableButton _addSingleTrackBtn;
     }
 }

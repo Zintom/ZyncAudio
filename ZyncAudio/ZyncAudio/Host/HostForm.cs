@@ -6,6 +6,7 @@ using System.Net.Sockets;
 using ZyncAudio.Host;
 using System.Windows.Forms;
 using Zintom.StorageFacility;
+using ZyncAudio.PlaylistReaders;
 
 namespace ZyncAudio
 {
@@ -37,7 +38,6 @@ namespace ZyncAudio
             ClientListView.MultiSelect = false;
             ClientListView.Columns.Add("address", "Address", 124);
             ClientListView.Columns.Add("ping", "Ping", 50);
-
 
             _logger = new ConsoleLogger();
             _server = new Server(_logger);
@@ -106,6 +106,7 @@ namespace ZyncAudio
                     _nextBtn.Enabled = false;
                     _playListView.Enabled = false;
                     _loadFolderBtn.Enabled = false;
+                    _addSingleTrackBtn.Enabled = false;
                     _unloadPlaylistBtn.Enabled = false;
                     _shuffleBtn.Enabled = false;
                     _searchSubFoldersBtn.Enabled = false;
@@ -121,6 +122,7 @@ namespace ZyncAudio
                     _nextBtn.Enabled = true;
                     _playListView.Enabled = true;
                     _loadFolderBtn.Enabled = true;
+                    _addSingleTrackBtn.Enabled = true;
                     _unloadPlaylistBtn.Enabled = true;
                     _shuffleBtn.Enabled = true;
                     _searchSubFoldersBtn.Enabled = true;
@@ -136,6 +138,7 @@ namespace ZyncAudio
                     _nextBtn.Enabled = false;
                     _playListView.Enabled = false;
                     _loadFolderBtn.Enabled = false;
+                    _addSingleTrackBtn.Enabled = false;
                     _unloadPlaylistBtn.Enabled = false;
                     _shuffleBtn.Enabled = false;
                     _searchSubFoldersBtn.Enabled = false;
@@ -262,10 +265,73 @@ namespace ZyncAudio
                         || file.EndsWith(".mp3")
                         || file.EndsWith(".flac"))
                     {
-                        _playlist.Add(file);
-                        _playListView.Items.Add(new FileInfo(file).Name);
+                        AddTrackToPlaylist(file);
                     }
                 }
+            }
+        }
+
+        private void AddSingleTrackBtn_Clicked(object sender, EventArgs e)
+        {
+            using (var fileDialog = new OpenFileDialog())
+            {
+                var result = fileDialog.ShowDialog();
+                if (result != DialogResult.OK) { return; }
+
+                string file = fileDialog.FileName;
+
+                if (file.EndsWith(".wav")
+                    || file.EndsWith(".mp3")
+                    || file.EndsWith(".flac"))
+                {
+                    AddTrackToPlaylist(file);
+                }
+                else if (file.EndsWith(".wpl") || file.EndsWith(".m3u"))
+                {
+                    LoadPlaylist(file);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Adds the given <paramref name="trackFilePath"/> to the playlist.
+        /// </summary>
+        private void AddTrackToPlaylist(string trackFilePath)
+        {
+            _playlist.Add(trackFilePath);
+            _playListView.Items.Add(new FileInfo(trackFilePath).Name);
+        }
+
+        private void LoadPlaylist(string file)
+        {
+            PlaylistReader playlistReader = null!;
+
+            if (file.EndsWith(".wpl"))
+            {
+                playlistReader = new WPLReader();
+            }
+            else if (file.EndsWith(".m3u"))
+            {
+                playlistReader = null!;
+            }
+
+            // Only ask to clear the current playlist if it
+            // actually has any items.
+            if (_playlist.TrackListSize > 0)
+            {
+                var dialogResult = MessageBox.Show(caption: "How shall we load the playlist?", text: "Erase the current playlist?", buttons: MessageBoxButtons.YesNo);
+
+                if (dialogResult == DialogResult.Yes)
+                {
+                    _audioServer.Stop();
+                    _playlist.Clear();
+                    _playListView.Items.Clear();
+                }
+            }
+
+            foreach (string track in playlistReader.Read(file).MediaItems)
+            {
+                AddTrackToPlaylist(track);
             }
         }
 
