@@ -102,11 +102,11 @@ namespace ZyncAudio
             // 
             this.label1.Anchor = System.Windows.Forms.AnchorStyles.Top;
             this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(172, 17);
+            this.label1.Location = new System.Drawing.Point(156, 17);
             this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(44, 15);
+            this.label1.Size = new System.Drawing.Size(84, 15);
             this.label1.TabIndex = 6;
-            this.label1.Text = "Playlist";
+            this.label1.Text = "Playing Queue";
             // 
             // _loadFolderBtn
             // 
@@ -123,7 +123,7 @@ namespace ZyncAudio
             this._loadFolderBtn.Size = new System.Drawing.Size(25, 25);
             this._loadFolderBtn.TabIndex = 7;
             this._loadFolderBtn.Tint = System.Drawing.Color.FromArgb(((int)(((byte)(52)))), ((int)(((byte)(73)))), ((int)(((byte)(94)))));
-            this._toolTipProvider.SetToolTip(this._loadFolderBtn, "Add a folder of tracks to the playlist.");
+            this._toolTipProvider.SetToolTip(this._loadFolderBtn, "Add a folder of tracks to the current playing queue.");
             this._loadFolderBtn.UseVisualStyleBackColor = true;
             this._loadFolderBtn.Click += new System.EventHandler(this.LoadFolderBtn_Click);
             // 
@@ -142,7 +142,7 @@ namespace ZyncAudio
             this._unloadPlaylistBtn.Size = new System.Drawing.Size(25, 25);
             this._unloadPlaylistBtn.TabIndex = 10;
             this._unloadPlaylistBtn.Tint = System.Drawing.Color.FromArgb(((int)(((byte)(231)))), ((int)(((byte)(76)))), ((int)(((byte)(60)))));
-            this._toolTipProvider.SetToolTip(this._unloadPlaylistBtn, "Remove all tracks from the playlist.");
+            this._toolTipProvider.SetToolTip(this._unloadPlaylistBtn, "Remove all tracks from the playing queue.");
             this._unloadPlaylistBtn.UseVisualStyleBackColor = true;
             this._unloadPlaylistBtn.Click += new System.EventHandler(this.UnloadItems_Click);
             // 
@@ -200,7 +200,7 @@ namespace ZyncAudio
             this._addSingleTrackBtn.Size = new System.Drawing.Size(25, 25);
             this._addSingleTrackBtn.TabIndex = 19;
             this._addSingleTrackBtn.Tint = System.Drawing.Color.FromArgb(((int)(((byte)(52)))), ((int)(((byte)(73)))), ((int)(((byte)(94)))));
-            this._toolTipProvider.SetToolTip(this._addSingleTrackBtn, "Add a track to the current playlist.");
+            this._toolTipProvider.SetToolTip(this._addSingleTrackBtn, "Add a track to the current playing queue.");
             this._addSingleTrackBtn.UseVisualStyleBackColor = true;
             this._addSingleTrackBtn.Click += new System.EventHandler(this.AddSingleTrackBtn_Clicked);
             // 
@@ -238,7 +238,7 @@ namespace ZyncAudio
             this._searchSubFoldersBtn.Size = new System.Drawing.Size(25, 25);
             this._searchSubFoldersBtn.TabIndex = 17;
             this._searchSubFoldersBtn.Tint = System.Drawing.Color.Silver;
-            this._toolTipProvider.SetToolTip(this._searchSubFoldersBtn, "Load sub-folders when adding a folder.");
+            this._toolTipProvider.SetToolTip(this._searchSubFoldersBtn, "Load sub-folders when adding a folder. (On/Off)");
             this._searchSubFoldersBtn.UseVisualStyleBackColor = true;
             this._searchSubFoldersBtn.Click += new System.EventHandler(this.SearchSubFoldersBtn_Click);
             // 
@@ -276,7 +276,8 @@ namespace ZyncAudio
             this._playBtn.Size = new System.Drawing.Size(30, 30);
             this._playBtn.TabIndex = 15;
             this._playBtn.Tint = System.Drawing.Color.FromArgb(((int)(((byte)(26)))), ((int)(((byte)(188)))), ((int)(((byte)(156)))));
-            this._toolTipProvider.SetToolTip(this._playBtn, "Play the currently selected track");
+            this._toolTipProvider.SetToolTip(this._playBtn, "Play the currently selected track or the first available track in the playing que" +
+        "ue.");
             this._playBtn.UseVisualStyleBackColor = false;
             this._playBtn.Click += new System.EventHandler(this.PlayBtn_Click);
             // 
@@ -290,6 +291,7 @@ namespace ZyncAudio
             this._volumeControlBar.TabIndex = 14;
             this._volumeControlBar.TickFrequency = 10;
             this._volumeControlBar.TickStyle = System.Windows.Forms.TickStyle.Both;
+            this._toolTipProvider.SetToolTip(this._volumeControlBar, "Adjust the volume for all clients.");
             this._volumeControlBar.Value = 100;
             this._volumeControlBar.Scroll += new System.EventHandler(this.VolumeControlBar_Scroll);
             // 
@@ -310,7 +312,7 @@ namespace ZyncAudio
             this._shuffleBtn.Size = new System.Drawing.Size(25, 25);
             this._shuffleBtn.TabIndex = 12;
             this._shuffleBtn.Tint = System.Drawing.Color.FromArgb(((int)(((byte)(26)))), ((int)(((byte)(188)))), ((int)(((byte)(156)))));
-            this._toolTipProvider.SetToolTip(this._shuffleBtn, "Shuffle the playlist.");
+            this._toolTipProvider.SetToolTip(this._shuffleBtn, "Shuffle the tracks in the playing queue.");
             this._shuffleBtn.UseVisualStyleBackColor = true;
             this._shuffleBtn.Click += new System.EventHandler(this.ShuffleBtnClicked);
             // 
@@ -333,7 +335,7 @@ namespace ZyncAudio
             this._previousBtn.TabIndex = 9;
             this._previousBtn.TextAlign = System.Drawing.ContentAlignment.TopCenter;
             this._previousBtn.Tint = System.Drawing.Color.FromArgb(((int)(((byte)(22)))), ((int)(((byte)(160)))), ((int)(((byte)(133)))));
-            this._toolTipProvider.SetToolTip(this._previousBtn, "Play the previous track in the playlist.");
+            this._toolTipProvider.SetToolTip(this._previousBtn, "Play the previous track in the playing queue.");
             this._previousBtn.UseVisualStyleBackColor = false;
             this._previousBtn.Click += new System.EventHandler(this.PreviousBtn_Click);
             // 
@@ -378,7 +380,7 @@ namespace ZyncAudio
             this._nextBtn.TabIndex = 8;
             this._nextBtn.TextAlign = System.Drawing.ContentAlignment.TopCenter;
             this._nextBtn.Tint = System.Drawing.Color.FromArgb(((int)(((byte)(22)))), ((int)(((byte)(160)))), ((int)(((byte)(133)))));
-            this._toolTipProvider.SetToolTip(this._nextBtn, "Play the next track in the playlist.");
+            this._toolTipProvider.SetToolTip(this._nextBtn, "Play the next track in the playing queue.");
             this._nextBtn.UseVisualStyleBackColor = false;
             this._nextBtn.Click += new System.EventHandler(this.NextBtn_Click);
             // 
