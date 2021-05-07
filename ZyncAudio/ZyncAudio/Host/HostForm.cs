@@ -458,6 +458,34 @@ namespace ZyncAudio
             };
             routerForm.Show(this);
         }
+
+        private void TrackElapsedTimeTicker_Tick(object sender, EventArgs e)
+        {
+            TimeSpan? currentTrackElapsedTime = _audioServer.CurrentTrackElapsedTime;
+            if (currentTrackElapsedTime == null)
+            {
+                if (_trackElapsedTimeLbl.Visible)
+                {
+                    _trackElapsedTimeLbl.Visible = false;
+                    _trackElapsedTimeLbl.Text = "00:00";
+                }
+                return;
+            }
+
+            if (!_trackElapsedTimeLbl.Visible)
+            {
+                _trackElapsedTimeLbl.Visible = true;
+            }
+
+            if (currentTrackElapsedTime.Value.Hours > 0)
+            {
+                _trackElapsedTimeLbl.Text = currentTrackElapsedTime.Value.ToString("hh':'mm':'ss");
+            }
+            else
+            {
+                _trackElapsedTimeLbl.Text = currentTrackElapsedTime.Value.ToString("mm':'ss");
+            }
+        }
     }
 
     public class FormLogger : ILogger

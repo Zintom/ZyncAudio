@@ -1,4 +1,6 @@
 ﻿
+using ZyncAudio.CustomControls;
+
 namespace ZyncAudio
 {
     partial class HostForm
@@ -36,21 +38,23 @@ namespace ZyncAudio
             this.PingChecker = new System.Windows.Forms.Timer(this.components);
             this._playListView = new System.Windows.Forms.ListBox();
             this.label1 = new System.Windows.Forms.Label();
-            this._loadFolderBtn = new ZyncAudio.TintableButton();
-            this._unloadPlaylistBtn = new ZyncAudio.TintableButton();
+            this._loadFolderBtn = new ZyncAudio.CustomControls.TintableButton();
+            this._unloadPlaylistBtn = new ZyncAudio.CustomControls.TintableButton();
             this._serverGroupBox = new System.Windows.Forms.GroupBox();
             this._mediaGroupBox = new System.Windows.Forms.GroupBox();
-            this._addSingleTrackBtn = new ZyncAudio.TintableButton();
-            this._rerouteAudioBtn = new ZyncAudio.TintableButton();
-            this._searchSubFoldersBtn = new ZyncAudio.TintableButton();
-            this._audioLevelsImg = new ZyncAudio.TintableButton();
-            this._playBtn = new ZyncAudio.TintableButton();
+            this._addSingleTrackBtn = new ZyncAudio.CustomControls.TintableButton();
+            this._rerouteAudioBtn = new ZyncAudio.CustomControls.TintableButton();
+            this._searchSubFoldersBtn = new ZyncAudio.CustomControls.TintableButton();
+            this._audioLevelsImg = new ZyncAudio.CustomControls.TintableButton();
+            this._playBtn = new ZyncAudio.CustomControls.TintableButton();
             this._volumeControlBar = new System.Windows.Forms.TrackBar();
-            this._shuffleBtn = new ZyncAudio.TintableButton();
-            this._previousBtn = new ZyncAudio.TintableButton();
-            this._stopBtn = new ZyncAudio.TintableButton();
-            this._nextBtn = new ZyncAudio.TintableButton();
+            this._shuffleBtn = new ZyncAudio.CustomControls.TintableButton();
+            this._previousBtn = new ZyncAudio.CustomControls.TintableButton();
+            this._stopBtn = new ZyncAudio.CustomControls.TintableButton();
+            this._nextBtn = new ZyncAudio.CustomControls.TintableButton();
             this._toolTipProvider = new System.Windows.Forms.ToolTip(this.components);
+            this._trackElapsedTimeTicker = new System.Windows.Forms.Timer(this.components);
+            this._trackElapsedTimeLbl = new System.Windows.Forms.Label();
             this._serverGroupBox.SuspendLayout();
             this._mediaGroupBox.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this._volumeControlBar)).BeginInit();
@@ -164,6 +168,7 @@ namespace ZyncAudio
             this._mediaGroupBox.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
+            this._mediaGroupBox.Controls.Add(this._trackElapsedTimeLbl);
             this._mediaGroupBox.Controls.Add(this._addSingleTrackBtn);
             this._mediaGroupBox.Controls.Add(this._rerouteAudioBtn);
             this._mediaGroupBox.Controls.Add(this._searchSubFoldersBtn);
@@ -390,6 +395,22 @@ namespace ZyncAudio
             this._toolTipProvider.InitialDelay = 500;
             this._toolTipProvider.ReshowDelay = 100;
             // 
+            // _trackElapsedTimeTicker
+            // 
+            this._trackElapsedTimeTicker.Enabled = true;
+            this._trackElapsedTimeTicker.Interval = 250;
+            this._trackElapsedTimeTicker.Tick += new System.EventHandler(this.TrackElapsedTimeTicker_Tick);
+            // 
+            // _trackElapsedTimeLbl
+            // 
+            this._trackElapsedTimeLbl.AutoSize = true;
+            this._trackElapsedTimeLbl.Font = new System.Drawing.Font("Segoe UI Semibold", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point);
+            this._trackElapsedTimeLbl.Location = new System.Drawing.Point(60, 374);
+            this._trackElapsedTimeLbl.Name = "_trackElapsedTimeLbl";
+            this._trackElapsedTimeLbl.Size = new System.Drawing.Size(50, 21);
+            this._trackElapsedTimeLbl.TabIndex = 20;
+            this._trackElapsedTimeLbl.Text = "00:00";
+            // 
             // HostForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
@@ -434,5 +455,7 @@ namespace ZyncAudio
         private TintableButton _searchSubFoldersBtn;
         private TintableButton _rerouteAudioBtn;
         private TintableButton _addSingleTrackBtn;
+        private System.Windows.Forms.Timer _trackElapsedTimeTicker;
+        private System.Windows.Forms.Label _trackElapsedTimeLbl;
     }
 }
