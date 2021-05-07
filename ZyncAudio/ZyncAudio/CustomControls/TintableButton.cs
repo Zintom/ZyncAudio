@@ -3,7 +3,7 @@ using System.Drawing;
 using System.Windows.Forms;
 using ZyncAudio.Extensions;
 
-namespace ZyncAudio
+namespace ZyncAudio.CustomControls
 {
     public class TintableButton : Button, IDisposable
     {

@@ -1,6 +1,6 @@
 ﻿using System.Windows.Forms;
 
-namespace ZyncAudio
+namespace ZyncAudio.CustomControls
 {
     public class IPAddressTextBox : TextBox
     {

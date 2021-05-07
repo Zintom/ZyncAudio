@@ -1,4 +1,6 @@
 ﻿
+using ZyncAudio.CustomControls;
+
 namespace ZyncAudio
 {
     partial class ClientForm
@@ -30,9 +32,9 @@ namespace ZyncAudio
         private void InitializeComponent()
         {
             this.components = new System.ComponentModel.Container();
-            this._hostBtn = new ZyncAudio.TintableButton();
+            this._hostBtn = new ZyncAudio.CustomControls.TintableButton();
             this._connectBtn = new System.Windows.Forms.Button();
-            this._ipAddressInputBox = new ZyncAudio.IPAddressTextBox();
+            this._ipAddressInputBox = new ZyncAudio.CustomControls.IPAddressTextBox();
             this.panel1 = new System.Windows.Forms.Panel();
             this._nowPlayingBarText = new System.Windows.Forms.Label();
             this._nowPlayingBarAnimator = new System.Windows.Forms.Timer(this.components);
