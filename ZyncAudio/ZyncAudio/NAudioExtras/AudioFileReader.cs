@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using NAudio.Wave.SampleProviders;
 
 #nullable disable
@@ -26,11 +27,11 @@ namespace NAudio.Wave
         /// Initializes a new instance of AudioFileReader
         /// </summary>
         /// <param name="fileName">The file to open</param>
-        public AudioFileReader(string fileName)
+        public AudioFileReader(string fileName, Stream dataStream)
         {
             lockObject = new object();
             FileName = fileName;
-            CreateReaderStream(fileName);
+            CreateReaderStream(fileName, dataStream);
             sourceBytesPerSample = (readerStream.WaveFormat.BitsPerSample / 8) * readerStream.WaveFormat.Channels;
             sampleChannel = new SampleChannel(readerStream, false);
             destBytesPerSample = 4 * sampleChannel.WaveFormat.Channels;
@@ -42,11 +43,11 @@ namespace NAudio.Wave
         /// and ensuring we are in PCM format
         /// </summary>
         /// <param name="fileName">File Name</param>
-        private void CreateReaderStream(string fileName)
+        private void CreateReaderStream(string fileName, Stream dataStream)
         {
             if (fileName.EndsWith(".wav", StringComparison.OrdinalIgnoreCase))
             {
-                readerStream = new WaveFileReader(fileName);
+                readerStream = new WaveFileReader(dataStream);
                 if (readerStream.WaveFormat.Encoding != WaveFormatEncoding.Pcm && readerStream.WaveFormat.Encoding != WaveFormatEncoding.IeeeFloat)
                 {
                     readerStream = WaveFormatConversionStream.CreatePcmStream(readerStream);
@@ -55,16 +56,16 @@ namespace NAudio.Wave
             }
             else if (fileName.EndsWith(".mp3", StringComparison.OrdinalIgnoreCase))
             {
-                readerStream = new Mp3FileReader(fileName);
+                readerStream = new Mp3FileReader(dataStream);
             }
             else if (fileName.EndsWith(".aiff", StringComparison.OrdinalIgnoreCase) || fileName.EndsWith(".aif", StringComparison.OrdinalIgnoreCase))
             {
-                readerStream = new AiffFileReader(fileName);
+                readerStream = new AiffFileReader(dataStream);
             }
             else
             {
                 // fall back to media foundation reader, see if that can play it
-                readerStream = new MediaFoundationReader(fileName);
+                readerStream = new StreamMediaFoundationReader(dataStream);
             }
         }
         /// <summary>
