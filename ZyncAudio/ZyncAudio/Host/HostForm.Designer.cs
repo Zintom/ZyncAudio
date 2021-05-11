@@ -42,6 +42,8 @@ namespace ZyncAudio
             this._unloadPlaylistBtn = new ZyncAudio.CustomControls.TintableButton();
             this._serverGroupBox = new System.Windows.Forms.GroupBox();
             this._mediaGroupBox = new System.Windows.Forms.GroupBox();
+            this._trackScrubBar = new System.Windows.Forms.TrackBar();
+            this._trackElapsedTimeLbl = new System.Windows.Forms.Label();
             this._addSingleTrackBtn = new ZyncAudio.CustomControls.TintableButton();
             this._rerouteAudioBtn = new ZyncAudio.CustomControls.TintableButton();
             this._searchSubFoldersBtn = new ZyncAudio.CustomControls.TintableButton();
@@ -54,16 +56,16 @@ namespace ZyncAudio
             this._nextBtn = new ZyncAudio.CustomControls.TintableButton();
             this._toolTipProvider = new System.Windows.Forms.ToolTip(this.components);
             this._trackElapsedTimeTicker = new System.Windows.Forms.Timer(this.components);
-            this._trackElapsedTimeLbl = new System.Windows.Forms.Label();
             this._serverGroupBox.SuspendLayout();
             this._mediaGroupBox.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this._trackScrubBar)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this._volumeControlBar)).BeginInit();
             this.SuspendLayout();
             // 
             // _closeEntryBtn
             // 
             this._closeEntryBtn.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
-            this._closeEntryBtn.Location = new System.Drawing.Point(13, 414);
+            this._closeEntryBtn.Location = new System.Drawing.Point(13, 482);
             this._closeEntryBtn.Name = "_closeEntryBtn";
             this._closeEntryBtn.Size = new System.Drawing.Size(112, 37);
             this._closeEntryBtn.TabIndex = 2;
@@ -78,7 +80,7 @@ namespace ZyncAudio
             this.ClientListView.HideSelection = false;
             this.ClientListView.Location = new System.Drawing.Point(13, 21);
             this.ClientListView.Name = "ClientListView";
-            this.ClientListView.Size = new System.Drawing.Size(178, 382);
+            this.ClientListView.Size = new System.Drawing.Size(178, 450);
             this.ClientListView.TabIndex = 4;
             this.ClientListView.UseCompatibleStateImageBehavior = false;
             // 
@@ -98,7 +100,7 @@ namespace ZyncAudio
             this._playListView.ItemHeight = 15;
             this._playListView.Location = new System.Drawing.Point(12, 39);
             this._playListView.Name = "_playListView";
-            this._playListView.Size = new System.Drawing.Size(364, 278);
+            this._playListView.Size = new System.Drawing.Size(364, 271);
             this._playListView.TabIndex = 5;
             this._playListView.MouseDown += new System.Windows.Forms.MouseEventHandler(this.PlayQueue_MouseDown);
             // 
@@ -122,7 +124,7 @@ namespace ZyncAudio
             this._loadFolderBtn.FlatAppearance.BorderSize = 0;
             this._loadFolderBtn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this._loadFolderBtn.FlipEffect = System.Drawing.RotateFlipType.RotateNoneFlipNone;
-            this._loadFolderBtn.Location = new System.Drawing.Point(247, 326);
+            this._loadFolderBtn.Location = new System.Drawing.Point(247, 319);
             this._loadFolderBtn.Name = "_loadFolderBtn";
             this._loadFolderBtn.Size = new System.Drawing.Size(25, 25);
             this._loadFolderBtn.TabIndex = 7;
@@ -141,7 +143,7 @@ namespace ZyncAudio
             this._unloadPlaylistBtn.FlatAppearance.BorderSize = 0;
             this._unloadPlaylistBtn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this._unloadPlaylistBtn.FlipEffect = System.Drawing.RotateFlipType.RotateNoneFlipNone;
-            this._unloadPlaylistBtn.Location = new System.Drawing.Point(313, 326);
+            this._unloadPlaylistBtn.Location = new System.Drawing.Point(313, 319);
             this._unloadPlaylistBtn.Name = "_unloadPlaylistBtn";
             this._unloadPlaylistBtn.Size = new System.Drawing.Size(25, 25);
             this._unloadPlaylistBtn.TabIndex = 10;
@@ -158,7 +160,7 @@ namespace ZyncAudio
             this._serverGroupBox.Controls.Add(this._closeEntryBtn);
             this._serverGroupBox.Location = new System.Drawing.Point(430, 12);
             this._serverGroupBox.Name = "_serverGroupBox";
-            this._serverGroupBox.Size = new System.Drawing.Size(203, 466);
+            this._serverGroupBox.Size = new System.Drawing.Size(203, 534);
             this._serverGroupBox.TabIndex = 12;
             this._serverGroupBox.TabStop = false;
             this._serverGroupBox.Text = "Server";
@@ -168,6 +170,7 @@ namespace ZyncAudio
             this._mediaGroupBox.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
+            this._mediaGroupBox.Controls.Add(this._trackScrubBar);
             this._mediaGroupBox.Controls.Add(this._trackElapsedTimeLbl);
             this._mediaGroupBox.Controls.Add(this._addSingleTrackBtn);
             this._mediaGroupBox.Controls.Add(this._rerouteAudioBtn);
@@ -185,10 +188,35 @@ namespace ZyncAudio
             this._mediaGroupBox.Controls.Add(this._loadFolderBtn);
             this._mediaGroupBox.Location = new System.Drawing.Point(12, 12);
             this._mediaGroupBox.Name = "_mediaGroupBox";
-            this._mediaGroupBox.Size = new System.Drawing.Size(388, 466);
+            this._mediaGroupBox.Size = new System.Drawing.Size(388, 534);
             this._mediaGroupBox.TabIndex = 13;
             this._mediaGroupBox.TabStop = false;
             this._mediaGroupBox.Text = "Media";
+            // 
+            // _trackScrubBar
+            // 
+            this._trackScrubBar.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this._trackScrubBar.Location = new System.Drawing.Point(89, 475);
+            this._trackScrubBar.Name = "_trackScrubBar";
+            this._trackScrubBar.Size = new System.Drawing.Size(210, 45);
+            this._trackScrubBar.TabIndex = 21;
+            this._trackScrubBar.TickStyle = System.Windows.Forms.TickStyle.None;
+            this._trackScrubBar.Scroll += new System.EventHandler(this.TrackScrubBar_Scroll);
+            this._trackScrubBar.MouseDown += new System.Windows.Forms.MouseEventHandler(this.TrackScrubBar_MouseDown);
+            this._trackScrubBar.MouseUp += new System.Windows.Forms.MouseEventHandler(this.TrackScrubBar_MouseUp);
+            // 
+            // _trackElapsedTimeLbl
+            // 
+            this._trackElapsedTimeLbl.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+            this._trackElapsedTimeLbl.AutoSize = true;
+            this._trackElapsedTimeLbl.Enabled = false;
+            this._trackElapsedTimeLbl.Font = new System.Drawing.Font("Segoe UI Semibold", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point);
+            this._trackElapsedTimeLbl.Location = new System.Drawing.Point(297, 474);
+            this._trackElapsedTimeLbl.Name = "_trackElapsedTimeLbl";
+            this._trackElapsedTimeLbl.Size = new System.Drawing.Size(50, 21);
+            this._trackElapsedTimeLbl.TabIndex = 20;
+            this._trackElapsedTimeLbl.Text = "00:00";
             // 
             // _addSingleTrackBtn
             // 
@@ -200,7 +228,7 @@ namespace ZyncAudio
             this._addSingleTrackBtn.FlatAppearance.BorderSize = 0;
             this._addSingleTrackBtn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this._addSingleTrackBtn.FlipEffect = System.Drawing.RotateFlipType.RotateNoneFlipNone;
-            this._addSingleTrackBtn.Location = new System.Drawing.Point(282, 326);
+            this._addSingleTrackBtn.Location = new System.Drawing.Point(282, 319);
             this._addSingleTrackBtn.Name = "_addSingleTrackBtn";
             this._addSingleTrackBtn.Size = new System.Drawing.Size(25, 25);
             this._addSingleTrackBtn.TabIndex = 19;
@@ -219,7 +247,7 @@ namespace ZyncAudio
             this._rerouteAudioBtn.FlatAppearance.BorderSize = 0;
             this._rerouteAudioBtn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this._rerouteAudioBtn.FlipEffect = System.Drawing.RotateFlipType.RotateNoneFlipNone;
-            this._rerouteAudioBtn.Location = new System.Drawing.Point(15, 323);
+            this._rerouteAudioBtn.Location = new System.Drawing.Point(15, 316);
             this._rerouteAudioBtn.Name = "_rerouteAudioBtn";
             this._rerouteAudioBtn.Size = new System.Drawing.Size(25, 25);
             this._rerouteAudioBtn.TabIndex = 18;
@@ -238,7 +266,7 @@ namespace ZyncAudio
             this._searchSubFoldersBtn.FlatAppearance.BorderSize = 0;
             this._searchSubFoldersBtn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this._searchSubFoldersBtn.FlipEffect = System.Drawing.RotateFlipType.RotateNoneFlipY;
-            this._searchSubFoldersBtn.Location = new System.Drawing.Point(215, 326);
+            this._searchSubFoldersBtn.Location = new System.Drawing.Point(215, 319);
             this._searchSubFoldersBtn.Name = "_searchSubFoldersBtn";
             this._searchSubFoldersBtn.Size = new System.Drawing.Size(25, 25);
             this._searchSubFoldersBtn.TabIndex = 17;
@@ -249,7 +277,7 @@ namespace ZyncAudio
             // 
             // _audioLevelsImg
             // 
-            this._audioLevelsImg.Anchor = System.Windows.Forms.AnchorStyles.Bottom;
+            this._audioLevelsImg.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
             this._audioLevelsImg.BackgroundImage = global::ZyncAudio.Properties.Resources.volume_high_8x;
             this._audioLevelsImg.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Zoom;
             this._audioLevelsImg.Checked = false;
@@ -257,7 +285,7 @@ namespace ZyncAudio
             this._audioLevelsImg.FlatAppearance.BorderSize = 0;
             this._audioLevelsImg.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this._audioLevelsImg.FlipEffect = System.Drawing.RotateFlipType.RotateNoneFlipNone;
-            this._audioLevelsImg.Location = new System.Drawing.Point(66, 421);
+            this._audioLevelsImg.Location = new System.Drawing.Point(17, 495);
             this._audioLevelsImg.Name = "_audioLevelsImg";
             this._audioLevelsImg.Size = new System.Drawing.Size(25, 25);
             this._audioLevelsImg.TabIndex = 16;
@@ -276,7 +304,7 @@ namespace ZyncAudio
             this._playBtn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this._playBtn.FlipEffect = System.Drawing.RotateFlipType.RotateNoneFlipNone;
             this._playBtn.Font = new System.Drawing.Font("Segoe UI", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
-            this._playBtn.Location = new System.Drawing.Point(161, 370);
+            this._playBtn.Location = new System.Drawing.Point(161, 430);
             this._playBtn.Name = "_playBtn";
             this._playBtn.Size = new System.Drawing.Size(30, 30);
             this._playBtn.TabIndex = 15;
@@ -288,11 +316,12 @@ namespace ZyncAudio
             // 
             // _volumeControlBar
             // 
-            this._volumeControlBar.Anchor = System.Windows.Forms.AnchorStyles.Bottom;
-            this._volumeControlBar.Location = new System.Drawing.Point(97, 414);
+            this._volumeControlBar.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this._volumeControlBar.Location = new System.Drawing.Point(8, 347);
             this._volumeControlBar.Maximum = 100;
             this._volumeControlBar.Name = "_volumeControlBar";
-            this._volumeControlBar.Size = new System.Drawing.Size(225, 45);
+            this._volumeControlBar.Orientation = System.Windows.Forms.Orientation.Vertical;
+            this._volumeControlBar.Size = new System.Drawing.Size(45, 142);
             this._volumeControlBar.TabIndex = 14;
             this._volumeControlBar.TickFrequency = 10;
             this._volumeControlBar.TickStyle = System.Windows.Forms.TickStyle.Both;
@@ -312,7 +341,7 @@ namespace ZyncAudio
             this._shuffleBtn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this._shuffleBtn.FlipEffect = System.Drawing.RotateFlipType.RotateNoneFlipNone;
             this._shuffleBtn.Font = new System.Drawing.Font("Segoe UI", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
-            this._shuffleBtn.Location = new System.Drawing.Point(346, 326);
+            this._shuffleBtn.Location = new System.Drawing.Point(346, 319);
             this._shuffleBtn.Name = "_shuffleBtn";
             this._shuffleBtn.Size = new System.Drawing.Size(25, 25);
             this._shuffleBtn.TabIndex = 12;
@@ -334,7 +363,7 @@ namespace ZyncAudio
             this._previousBtn.FlipEffect = System.Drawing.RotateFlipType.RotateNoneFlipNone;
             this._previousBtn.Font = new System.Drawing.Font("Segoe UI", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
             this._previousBtn.ForeColor = System.Drawing.Color.White;
-            this._previousBtn.Location = new System.Drawing.Point(116, 370);
+            this._previousBtn.Location = new System.Drawing.Point(116, 430);
             this._previousBtn.Name = "_previousBtn";
             this._previousBtn.Size = new System.Drawing.Size(30, 30);
             this._previousBtn.TabIndex = 9;
@@ -357,7 +386,7 @@ namespace ZyncAudio
             this._stopBtn.FlipEffect = System.Drawing.RotateFlipType.RotateNoneFlipNone;
             this._stopBtn.Font = new System.Drawing.Font("Segoe UI", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
             this._stopBtn.ForeColor = System.Drawing.Color.White;
-            this._stopBtn.Location = new System.Drawing.Point(199, 370);
+            this._stopBtn.Location = new System.Drawing.Point(199, 430);
             this._stopBtn.Name = "_stopBtn";
             this._stopBtn.Size = new System.Drawing.Size(30, 30);
             this._stopBtn.TabIndex = 1;
@@ -379,7 +408,7 @@ namespace ZyncAudio
             this._nextBtn.FlipEffect = System.Drawing.RotateFlipType.RotateNoneFlipNone;
             this._nextBtn.Font = new System.Drawing.Font("Segoe UI", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
             this._nextBtn.ForeColor = System.Drawing.Color.White;
-            this._nextBtn.Location = new System.Drawing.Point(243, 370);
+            this._nextBtn.Location = new System.Drawing.Point(243, 430);
             this._nextBtn.Name = "_nextBtn";
             this._nextBtn.Size = new System.Drawing.Size(30, 30);
             this._nextBtn.TabIndex = 8;
@@ -397,30 +426,19 @@ namespace ZyncAudio
             // 
             // _trackElapsedTimeTicker
             // 
-            this._trackElapsedTimeTicker.Enabled = true;
             this._trackElapsedTimeTicker.Interval = 250;
             this._trackElapsedTimeTicker.Tick += new System.EventHandler(this.TrackElapsedTimeTicker_Tick);
-            // 
-            // _trackElapsedTimeLbl
-            // 
-            this._trackElapsedTimeLbl.AutoSize = true;
-            this._trackElapsedTimeLbl.Font = new System.Drawing.Font("Segoe UI Semibold", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point);
-            this._trackElapsedTimeLbl.Location = new System.Drawing.Point(60, 374);
-            this._trackElapsedTimeLbl.Name = "_trackElapsedTimeLbl";
-            this._trackElapsedTimeLbl.Size = new System.Drawing.Size(50, 21);
-            this._trackElapsedTimeLbl.TabIndex = 20;
-            this._trackElapsedTimeLbl.Text = "00:00";
             // 
             // HostForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(645, 490);
+            this.ClientSize = new System.Drawing.Size(645, 558);
             this.Controls.Add(this._mediaGroupBox);
             this.Controls.Add(this._serverGroupBox);
             this.Location = new System.Drawing.Point(100, 100);
             this.MaximizeBox = false;
-            this.MinimumSize = new System.Drawing.Size(661, 300);
+            this.MinimumSize = new System.Drawing.Size(661, 400);
             this.Name = "HostForm";
             this.ShowIcon = false;
             this.Text = "Zync Audio Host";
@@ -429,6 +447,7 @@ namespace ZyncAudio
             this._serverGroupBox.ResumeLayout(false);
             this._mediaGroupBox.ResumeLayout(false);
             this._mediaGroupBox.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)(this._trackScrubBar)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this._volumeControlBar)).EndInit();
             this.ResumeLayout(false);
 
@@ -457,5 +476,6 @@ namespace ZyncAudio
         private TintableButton _addSingleTrackBtn;
         private System.Windows.Forms.Timer _trackElapsedTimeTicker;
         private System.Windows.Forms.Label _trackElapsedTimeLbl;
+        private System.Windows.Forms.TrackBar _trackScrubBar;
     }
 }

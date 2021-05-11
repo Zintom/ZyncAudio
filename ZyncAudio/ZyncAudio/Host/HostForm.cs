@@ -28,6 +28,8 @@ namespace ZyncAudio
 
         private readonly Playlist _playlist = new();
 
+        private static readonly TimeSpan _preBufferSize = TimeSpan.FromSeconds(2);
+
         public HostForm()
         {
             InitializeComponent();
@@ -47,6 +49,7 @@ namespace ZyncAudio
             _server.ClientConnected = ClientConnected;
             _server.ClientDisconnected = ClientDisconnected;
 
+            _audioServer.PlaybackStarted += PlaybackStarted;
             _audioServer.PlaybackStoppedNaturally += PlaybackStoppedNaturally;
 
             var settings = Storage.GetStorage(Program.SettingsFile);
@@ -150,7 +153,7 @@ namespace ZyncAudio
         }
 
         private bool _paused = true;
-        private long _pausedOnByte = 0L;
+        private long _pausedOnMilliseconds = 0L;
         private readonly object _mediaActionLockObject = new();
         private void PlayBtn_Click(object sender, EventArgs e)
         {
@@ -158,33 +161,33 @@ namespace ZyncAudio
             {
                 if (_paused)
                 {
-                    _audioServer.PlayAsync(_playlist.Current, _pausedOnByte);
+                    _audioServer.PlayAsync(_playlist.Current, TimeSpan.FromMilliseconds(_pausedOnMilliseconds), _preBufferSize);
 
                     SetPausedState(false, 0L);
                 }
                 else
                 {
-                    SetPausedState(true, _audioServer.CurrentTrackPositionBytes);
-                    _audioServer.Stop();
+                    SetPausedState(true, (long)_audioServer.CurrentTrackElapsedTime.TotalMilliseconds);
+                    _audioServer.Stop(false);
                 }
 
                 RefreshNowPlaying();
             }
         }
 
-        private void SetPausedState(bool paused, long pausedBytePosition = 0L)
+        private void SetPausedState(bool paused, long pausedMillisecondPosition = 0L)
         {
             if (paused)
             {
                 _paused = true;
-                _pausedOnByte = pausedBytePosition;
+                _pausedOnMilliseconds = pausedMillisecondPosition;
                 _playBtn.BackgroundImage = Properties.Resources.media_play_8x;
                 _toolTipProvider.SetToolTip(_playBtn, "Plays the current track.");
             }
             else
             {
                 _paused = false;
-                _pausedOnByte = 0L;
+                _pausedOnMilliseconds = 0L;
                 _playBtn.BackgroundImage = Properties.Resources.media_pause_8x;
                 _toolTipProvider.SetToolTip(_playBtn, "Pauses the current track.");
             }
@@ -194,7 +197,7 @@ namespace ZyncAudio
         {
             lock (_mediaActionLockObject)
             {
-                _audioServer.Stop();
+                _audioServer.Stop(true);
 
                 RefreshNowPlaying();
                 SetPausedState(true);
@@ -240,7 +243,7 @@ namespace ZyncAudio
 
         private void HostForm_FormClosing(object sender, FormClosingEventArgs e)
         {
-            _audioServer.Stop();
+            _audioServer.Stop(true);
             _server.Close();
 
             var settingsEditor = Storage.GetStorage(Program.SettingsFile).Edit();
@@ -323,7 +326,7 @@ namespace ZyncAudio
 
                 if (dialogResult == DialogResult.Yes)
                 {
-                    _audioServer.Stop();
+                    _audioServer.Stop(true);
                     _playlist.Clear();
                     _playListView.Items.Clear();
                 }
@@ -341,10 +344,27 @@ namespace ZyncAudio
             _playListView.Items.Clear();
         }
 
+        private void PlaybackStarted(AudioServer.TrackInformation trackInfo)
+        {
+            Invoke(new Action(() =>
+            {
+                if (trackInfo.Type == AudioServer.TrackInformation.TrackType.LiveStream)
+                {
+                    _trackScrubBar.Enabled = false;
+                    _trackScrubBar.Value = 0;
+                    return;
+                }
+
+                _trackElapsedTimeTicker.Start();
+                _trackScrubBar.Enabled = true;
+                _trackScrubBar.Maximum = (int)trackInfo.Length;
+            }));
+        }
+
         private void PlaybackStoppedNaturally()
         {
             _playlist.MoveNext();
-            _audioServer.PlayAsync(_playlist.Current);
+            _audioServer.PlayAsync(_playlist.Current, TimeSpan.Zero, _preBufferSize);
 
             RefreshNowPlaying();
         }
@@ -353,9 +373,9 @@ namespace ZyncAudio
         {
             lock (_mediaActionLockObject)
             {
-                _audioServer.Stop();
+                _audioServer.Stop(true);
                 _playlist.MoveNext();
-                _audioServer.PlayAsync(_playlist.Current);
+                _audioServer.PlayAsync(_playlist.Current, TimeSpan.Zero, _preBufferSize);
 
                 if (_playlist.Current == null)
                 {
@@ -371,9 +391,9 @@ namespace ZyncAudio
         {
             lock (_mediaActionLockObject)
             {
-                _audioServer.Stop();
+                _audioServer.Stop(true);
                 _playlist.MovePrevious();
-                _audioServer.PlayAsync(_playlist.Current);
+                _audioServer.PlayAsync(_playlist.Current, TimeSpan.Zero, _preBufferSize);
 
                 if (_playlist.Current == null)
                 {
@@ -391,8 +411,8 @@ namespace ZyncAudio
             lock (_mediaActionLockObject)
             {
                 _playlist.Position = _playListView.SelectedIndex;
-                _audioServer.Stop();
-                _audioServer.PlayAsync(_playlist.Current);
+                _audioServer.Stop(true);
+                _audioServer.PlayAsync(_playlist.Current, TimeSpan.Zero, _preBufferSize);
 
                 SetPausedState(false);
                 RefreshNowPlaying();
@@ -449,8 +469,7 @@ namespace ZyncAudio
         {
             ChangeGUIState(GUIState.AudioRerouterOpened);
 
-            var routerForm = new AudioRerouter(_audioServer);
-            routerForm.Owner = this;
+            var routerForm = new AudioRerouter(_audioServer) { Owner = this };
             routerForm.FormClosed += (o, e) =>
             {
                 ChangeGUIState(GUIState.ServerEntryClosed);
@@ -461,29 +480,66 @@ namespace ZyncAudio
 
         private void TrackElapsedTimeTicker_Tick(object sender, EventArgs e)
         {
-            TimeSpan? currentTrackElapsedTime = _audioServer.CurrentTrackElapsedTime;
-            if (currentTrackElapsedTime == null)
+            if (_manualScrubbing)
             {
-                if (_trackElapsedTimeLbl.Visible)
+                return;
+            }
+
+            TimeSpan currentTrackElapsedTime = _audioServer.CurrentTrackElapsedTime;
+            if (currentTrackElapsedTime == TimeSpan.Zero)
+            {
+                if (_trackElapsedTimeLbl.Enabled)
                 {
-                    _trackElapsedTimeLbl.Visible = false;
+                    _trackElapsedTimeLbl.Enabled = false;
                     _trackElapsedTimeLbl.Text = "00:00";
                 }
                 return;
             }
 
-            if (!_trackElapsedTimeLbl.Visible)
+            if (!_trackElapsedTimeLbl.Enabled)
             {
-                _trackElapsedTimeLbl.Visible = true;
+                _trackElapsedTimeLbl.Enabled = true;
             }
 
-            if (currentTrackElapsedTime.Value.Hours > 0)
+            UpdateScrubBarAndText(currentTrackElapsedTime);
+
+            _trackScrubBar.Value = (int)currentTrackElapsedTime.TotalMilliseconds % _trackScrubBar.Maximum;
+        }
+
+        private void UpdateScrubBarAndText(TimeSpan time)
+        {
+            if (time.Hours > 0)
             {
-                _trackElapsedTimeLbl.Text = currentTrackElapsedTime.Value.ToString("hh':'mm':'ss");
+                _trackElapsedTimeLbl.Text = time.ToString("hh':'mm':'ss");
             }
             else
             {
-                _trackElapsedTimeLbl.Text = currentTrackElapsedTime.Value.ToString("mm':'ss");
+                _trackElapsedTimeLbl.Text = time.ToString("mm':'ss");
+            }
+        }
+
+        private bool _manualScrubbing = false;
+        private int _manualScrubPosition = -1;
+        private void TrackScrubBar_Scroll(object sender, EventArgs e)
+        {
+            _manualScrubPosition = _trackScrubBar.Value;
+            UpdateScrubBarAndText(TimeSpan.FromMilliseconds(_manualScrubPosition));
+        }
+
+        private void TrackScrubBar_MouseDown(object sender, MouseEventArgs e)
+        {
+            _manualScrubbing = true;
+        }
+
+        private void TrackScrubBar_MouseUp(object sender, MouseEventArgs e)
+        {
+            _trackElapsedTimeTicker.Enabled = false;
+            _trackScrubBar.Enabled = false;
+            _manualScrubbing = false;
+            lock (_mediaActionLockObject)
+            {
+                _audioServer.Stop(false);
+                _audioServer.PlayAsync(_playlist.Current, TimeSpan.FromMilliseconds(_manualScrubPosition), _preBufferSize);
             }
         }
     }
