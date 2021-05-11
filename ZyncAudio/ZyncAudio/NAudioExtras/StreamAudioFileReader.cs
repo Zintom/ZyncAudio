@@ -1,9 +1,11 @@
 ﻿using System;
+using System.IO;
 using NAudio.Wave.SampleProviders;
 
 #nullable disable
 namespace NAudio.Wave
 {
+    [Obsolete("Deprecated", true)]
     /// <summary>
     /// AudioFileReader simplifies opening an audio file in NAudio
     /// Simply pass in the filename, and it will attempt to open the
@@ -13,7 +15,7 @@ namespace NAudio.Wave
     /// ISampleProvider, making it possibly the only stage in your audio
     /// pipeline necessary for simple playback scenarios
     /// </summary>
-    public class AudioFileReader : WaveStream, ISampleProvider
+    public class StreamAudioFileReader : WaveStream, ISampleProvider
     {
         private WaveStream readerStream; // the waveStream which we will use for all positioning
         private readonly SampleChannel sampleChannel; // sample provider that gives us most stuff we need
@@ -26,11 +28,11 @@ namespace NAudio.Wave
         /// Initializes a new instance of AudioFileReader
         /// </summary>
         /// <param name="fileName">The file to open</param>
-        public AudioFileReader(string fileName)
+        public StreamAudioFileReader(string fileName, Stream dataStream)
         {
             lockObject = new object();
             FileName = fileName;
-            CreateReaderStream(fileName);
+            CreateReaderStream(fileName, dataStream);
             sourceBytesPerSample = (readerStream.WaveFormat.BitsPerSample / 8) * readerStream.WaveFormat.Channels;
             sampleChannel = new SampleChannel(readerStream, false);
             destBytesPerSample = 4 * sampleChannel.WaveFormat.Channels;
@@ -42,11 +44,11 @@ namespace NAudio.Wave
         /// and ensuring we are in PCM format
         /// </summary>
         /// <param name="fileName">File Name</param>
-        private void CreateReaderStream(string fileName)
+        private void CreateReaderStream(string fileName, Stream dataStream)
         {
             if (fileName.EndsWith(".wav", StringComparison.OrdinalIgnoreCase))
             {
-                readerStream = new WaveFileReader(fileName);
+                readerStream = new WaveFileReader(dataStream);
                 if (readerStream.WaveFormat.Encoding != WaveFormatEncoding.Pcm && readerStream.WaveFormat.Encoding != WaveFormatEncoding.IeeeFloat)
                 {
                     readerStream = WaveFormatConversionStream.CreatePcmStream(readerStream);
@@ -55,16 +57,16 @@ namespace NAudio.Wave
             }
             else if (fileName.EndsWith(".mp3", StringComparison.OrdinalIgnoreCase))
             {
-                readerStream = new Mp3FileReader(fileName);
+                readerStream = new Mp3FileReader(dataStream);
             }
             else if (fileName.EndsWith(".aiff", StringComparison.OrdinalIgnoreCase) || fileName.EndsWith(".aif", StringComparison.OrdinalIgnoreCase))
             {
-                readerStream = new AiffFileReader(fileName);
+                readerStream = new AiffFileReader(dataStream);
             }
             else
             {
                 // fall back to media foundation reader, see if that can play it
-                readerStream = new MediaFoundationReader(fileName);
+                readerStream = new StreamMediaFoundationReader(dataStream);
             }
         }
         /// <summary>
