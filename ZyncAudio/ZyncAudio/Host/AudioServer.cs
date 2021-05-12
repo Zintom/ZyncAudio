@@ -145,35 +145,39 @@ namespace ZyncAudio.Host
         /// <inheritdoc cref="PlaySong(WaveStream?, IWaveProvider, TimeSpan, TimeSpan)"/>
         private void PlaySong(string fileName, TimeSpan startOffset, TimeSpan preBuffer)
         {
-            if (_lastLoadedFile != null)
+            lock (_playOrStopLockObject)
             {
-                if (fileName == _lastLoadedFile.FileName)
+                if (_lastLoadedFile != null)
                 {
-                    Debug.WriteLine($"There is an existing stream for {new FileInfo(fileName).Name}, reusing.");
-                    _lastLoadedFile.Position = 0;
+                    if (fileName == _lastLoadedFile.FileName)
+                    {
+                        Debug.WriteLine($"There is an existing stream for {new FileInfo(fileName).Name}, reusing.");
+                        _lastLoadedFile.Position = 0;
+                    }
+                    else
+                    {
+                        Debug.WriteLine($"There is an existing stream for {new FileInfo(_lastLoadedFile.FileName).Name}, disposing to make way for {new FileInfo(fileName).Name}.");
+                        _lastLoadedFile?.Dispose();
+                        _lastLoadedFile = null;
+                    }
                 }
-                else
-                {
-                    Debug.WriteLine($"There is an existing stream for {new FileInfo(_lastLoadedFile.FileName).Name}, disposing to make way for {new FileInfo(fileName).Name}.");
-                    _lastLoadedFile?.Dispose();
-                    _lastLoadedFile = null;
-                }
-            }
 
-            if (_lastLoadedFile == null)
-            {
-                Debug.WriteLine($"There is no existing stream for {new FileInfo(fileName).Name}, acquiring.");
+                if (_lastLoadedFile == null)
+                {
+                    Debug.WriteLine($"There is no existing stream for {new FileInfo(fileName).Name}, acquiring.");
 
-                try
-                {
-                    _lastLoadedFile = new AudioFileReader(fileName);
+                    try
+                    {
+                        _lastLoadedFile = new AudioFileReader(fileName);
+                    }
+                    catch (FormatException)
+                    {
+                        _lastLoadedFile?.Dispose();
+                        _lastLoadedFile = null;
+                        return;
+                    }
                 }
-                catch (FormatException)
-                {
-                    _lastLoadedFile?.Dispose();
-                    _lastLoadedFile = null;
-                    return;
-                }
+
             }
 
             PlaySong(_lastLoadedFile, _lastLoadedFile, startOffset, preBuffer);
