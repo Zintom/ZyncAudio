@@ -90,7 +90,7 @@ namespace ZyncAudio.Host
         /// </summary>
         private void ExecuteRerouteAsync()
         {
-            _audioServer.Stop();
+            _audioServer.Stop(true);
             _audioServer.ChangeNowPlayingInfo("Streaming live audio from the host machine.");
 
             new Thread(() =>
@@ -144,12 +144,12 @@ namespace ZyncAudio.Host
 
                 // Wait for 2 seconds of captured audio to become available.
                 Thread.Sleep(2500);
-                _audioServer.PlayLiveAudioAsync(bufferedProvider, 2);
+                _audioServer.PlayLiveAudioAsync(bufferedProvider, TimeSpan.FromSeconds(2));
 
                 // Re-route until we are told to stop.
                 _exitRerouterThread.WaitOne();
 
-                _audioServer.Stop();
+                _audioServer.Stop(true);
 
                 capture.StopRecording();
                 capture.Dispose();
@@ -191,7 +191,7 @@ namespace ZyncAudio.Host
                 _rerouterFinished.WaitOne();
 
                 _selectedSourceID = null;
-                _audioServer.Stop();
+                _audioServer.Stop(true);
                 return;
             }
 

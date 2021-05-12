@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
@@ -19,6 +20,37 @@ namespace ZyncAudio.Host
     public class AudioServer
     {
 
+        /// <summary>
+        /// Used to communicate track information to the host.
+        /// </summary>
+        public class TrackInformation
+        {
+            public enum TrackType
+            {
+                /// <summary>
+                /// The track has a fixed length (i.e a mp3 file).
+                /// </summary>
+                FixedLength,
+                /// <summary>
+                /// The track has no fixed length (i.e a live stream).
+                /// </summary>
+                LiveStream
+            }
+
+            public TrackType Type { get; private init; }
+
+            /// <summary>
+            /// The length of the track in <b>milliseconds</b>, undefined if <see cref="Type"/> is <see cref="TrackType.LiveStream"/>
+            /// </summary>
+            public long Length { get; private init; }
+
+            public TrackInformation(long lengthInMilliseconds = -1)
+            {
+                Length = lengthInMilliseconds;
+                Type = lengthInMilliseconds == -1 ? TrackType.LiveStream : TrackType.FixedLength;
+            }
+        }
+
         public bool IsOpen { get; private set; } = true;
 
         public ISocketServer SocketServer { get; private set; }
@@ -29,28 +61,18 @@ namespace ZyncAudio.Host
 
         public Pinger Pinger { get; private init; }
 
+        public event Action<TrackInformation>? PlaybackStarted;
         public event Action? PlaybackStoppedNaturally;
-
-        private long _currentTrackByteRate;
-        public long CurrentTrackPositionBytes
-        {
-            get
-            {
-                if (CurrentTrackElapsedTime == null) { return 0; }
-
-                return (long)(CurrentTrackElapsedTime.Value.TotalMilliseconds * (_currentTrackByteRate / 1000D));
-            }
-        }
 
         private long _trackStartedUnixTimeMillis = -1;
         /// <summary>
         /// Gets the amount of time since the track was started.
         /// </summary>
-        public TimeSpan? CurrentTrackElapsedTime
+        public TimeSpan CurrentTrackElapsedTime
         {
             get
             {
-                if (_trackStartedUnixTimeMillis == -1) { return null; }
+                if (_trackStartedUnixTimeMillis == -1) { return TimeSpan.Zero; }
 
                 return TimeSpan.FromMilliseconds(DateTimeOffset.Now.ToUnixTimeMilliseconds() - _trackStartedUnixTimeMillis);
             }
@@ -75,7 +97,7 @@ namespace ZyncAudio.Host
         /// </summary>
         private readonly object _playOrStopLockObject = new();
 
-        public bool PlayAsync(string? fileName, long startOffsetBytePosition = 0)
+        public bool PlayAsync(string? fileName, TimeSpan startOffset, TimeSpan preBuffer)
         {
             if (fileName == null) return false;
             if (SocketServer.Clients.Count == 0) return false;
@@ -89,7 +111,7 @@ namespace ZyncAudio.Host
 
                 _playbackState = PlaybackState.Playing;
 
-                new Thread(() => PlaySong(fileName, startOffsetBytePosition))
+                new Thread(() => PlaySong(fileName, startOffset, preBuffer))
                 {
                     Priority = ThreadPriority.AboveNormal
                 }.Start();
@@ -97,7 +119,7 @@ namespace ZyncAudio.Host
             }
         }
 
-        public bool PlayLiveAudioAsync(IWaveProvider waveProvider, int upFrontSampleSecondsToSend)
+        public bool PlayLiveAudioAsync(IWaveProvider waveProvider, TimeSpan preBuffer)
         {
             if (waveProvider == null) return false;
             if (SocketServer.Clients.Count == 0) return false;
@@ -111,7 +133,7 @@ namespace ZyncAudio.Host
 
                 _playbackState = PlaybackState.Playing;
 
-                new Thread(() => PlaySong(null, waveProvider, 0, upFrontSampleSecondsToSend))
+                new Thread(() => PlaySong(null, waveProvider, TimeSpan.Zero, preBuffer))
                 {
                     Priority = ThreadPriority.AboveNormal
                 }.Start();
@@ -119,21 +141,64 @@ namespace ZyncAudio.Host
             }
         }
 
-        private void PlaySong(string fileName, long startOffsetBytePosition)
+        private AudioFileReader? _lastLoadedFile = null;
+        /// <inheritdoc cref="PlaySong(WaveStream?, IWaveProvider, TimeSpan, TimeSpan)"/>
+        private void PlaySong(string fileName, TimeSpan startOffset, TimeSpan preBuffer)
         {
-            try
+            if (_lastLoadedFile != null)
             {
-                var reader = new AudioFileReader(fileName);
-                PlaySong(reader, reader, startOffsetBytePosition);
+                if (fileName == _lastLoadedFile.FileName)
+                {
+                    Debug.WriteLine($"There is an existing stream for {new FileInfo(fileName).Name}, reusing.");
+                    _lastLoadedFile.Position = 0;
+                }
+                else
+                {
+                    Debug.WriteLine($"There is an existing stream for {new FileInfo(_lastLoadedFile.FileName).Name}, disposing to make way for {new FileInfo(fileName).Name}.");
+                    _lastLoadedFile?.Dispose();
+                    _lastLoadedFile = null;
+                }
             }
-            catch (FormatException)
-            {
 
+            if (_lastLoadedFile == null)
+            {
+                Debug.WriteLine($"There is no existing stream for {new FileInfo(fileName).Name}, acquiring.");
+
+                try
+                {
+                    _lastLoadedFile = new AudioFileReader(fileName);
+                }
+                catch (FormatException)
+                {
+                    _lastLoadedFile?.Dispose();
+                    _lastLoadedFile = null;
+                    return;
+                }
             }
+
+            PlaySong(_lastLoadedFile, _lastLoadedFile, startOffset, preBuffer);
         }
 
-        private void PlaySong(WaveStream? waveStream, IWaveProvider waveProvider, long startOffsetBytePosition, int upFrontSampleSecondsToSend = 2)
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="waveStream"></param>
+        /// <param name="waveProvider"></param>
+        /// <param name="startOffset">The time position where we should begin playback from.</param>
+        /// <param name="preBuffer">How many samples (in time) we should send to the client up front.</param>
+        private void PlaySong(WaveStream? waveStream, IWaveProvider waveProvider, TimeSpan startOffset, TimeSpan preBuffer)
         {
+            TrackInformation trackInformation;
+            if (waveStream == null)
+            {
+                trackInformation = new TrackInformation();
+            }
+            else
+            {
+                trackInformation = new TrackInformation((long)waveStream.TotalTime.TotalMilliseconds);
+            }
+            PlaybackStarted?.Invoke(trackInformation);
+
             // Inform all clients to stop any audio they might be playing.
             SocketServer.SendAll(BitConverter.GetBytes((int)(MessageIdentifier.StopAudio | MessageIdentifier.AudioProcessing)));
 
@@ -143,10 +208,12 @@ namespace ZyncAudio.Host
                                                             waveFormatBytes));
 
             int byteRate = waveProvider.WaveFormat.GetBitrate() / 8; // The bitrate is the number of bits per second, so divide it by 8 to gets the bytes per second.
-            _currentTrackByteRate = byteRate;
+
+            long startOffsetMilliseconds = (long)startOffset.TotalMilliseconds;
+            long startOffsetBytePosition = startOffsetMilliseconds == 0 ? 0 : (long)((startOffsetMilliseconds / 1000d) * byteRate);
 
             // Send intial samples of audio
-            bool allSamplesUsed = SendUpFrontSamples(SocketServer, waveProvider, byteRate, upFrontSampleSecondsToSend, startOffsetBytePosition);
+            bool allSamplesUsed = SendUpFrontSamples(SocketServer, waveProvider, byteRate, (int)preBuffer.TotalSeconds, startOffsetBytePosition);
 
             if (allSamplesUsed || _stopPlayback)
             {
@@ -169,14 +236,14 @@ namespace ZyncAudio.Host
                 //                                                                    // We need to offset the start time
                 //                                                                    // by the amount of bytes we are offset by.
                 //                                                                    // (Byte Offset / Bytes Per Second) * 1000 (to get milliseconds).
-                _trackStartedUnixTimeMillis = DateTimeOffset.Now.ToUnixTimeMilliseconds() - ((startOffsetBytePosition / byteRate) * 1000);
+                _trackStartedUnixTimeMillis = DateTimeOffset.Now.ToUnixTimeMilliseconds() - startOffsetMilliseconds;
             }
 
             // Give clients a second to compose themselves as they have just started playing audio.
             Thread.Sleep(250);
             if (_stopPlayback) { goto stopAudio; }
 
-            SendSamplesUntilEnd(waveStream, waveProvider, byteRate);
+            SendSamplesUntilEnd(waveProvider, byteRate);
 
             if (!_stopPlayback && waveStream != null)
             {
@@ -187,9 +254,11 @@ namespace ZyncAudio.Host
                 }
             }
 
-            waveStream?.Dispose();
-
         stopAudio:
+
+            // Do not dispose of the WaveStream as we may be able
+            // to reuse it if the user is scrubbing through the current song.
+            //waveStream?.Dispose();
 
             SocketServer.SendAll(BitConverter.GetBytes((int)(MessageIdentifier.StopAudio | MessageIdentifier.AudioProcessing)));
 
@@ -278,7 +347,7 @@ namespace ZyncAudio.Host
             watch.Stop();
         }
 
-        private void SendSamplesUntilEnd(WaveStream? waveStream, IWaveProvider waveProvider, int byteRate)
+        private void SendSamplesUntilEnd(IWaveProvider waveProvider, int byteRate)
         {
             Stopwatch elapsed = new Stopwatch();
             elapsed.Start();
@@ -337,7 +406,8 @@ namespace ZyncAudio.Host
         /// <summary>
         /// Stops playback of the current track if something is playing.
         /// </summary>
-        public bool Stop()
+        /// <param name="disposeOfFile">Set to <see langword="false"/> if you intend for the current file to be reused on the next call to <c>Play</c>.</param>
+        public bool Stop(bool disposeOfFile = true)
         {
             lock (_playOrStopLockObject)
             {
@@ -353,6 +423,14 @@ namespace ZyncAudio.Host
 
                 // Wait for the sample distributor to respond.
                 _stoppedPlayback.WaitOne();
+
+                if (disposeOfFile)
+                {
+                    // The caller has indicated they do not wish to reuse the current file for the next
+                    // call to play so dispose of it.
+                    _lastLoadedFile?.Dispose();
+                    _lastLoadedFile = null;
+                }
 
                 return true;
             }
