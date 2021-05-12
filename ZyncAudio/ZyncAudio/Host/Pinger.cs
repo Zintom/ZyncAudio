@@ -118,7 +118,7 @@ namespace ZyncAudio.Host
 
                     watch.Start();
 
-                    _socketServer.Send(BitConverter.GetBytes((int)(MessageIdentifier.Request | MessageIdentifier.Ping)), client);
+                    _socketServer.Send(BitConverter.GetBytes((int)(MessageIdentifier.Request | MessageIdentifier.Ping | MessageIdentifier.ProcessImmediately)), client);
                 }
 
                 await Task.Delay(1000).ConfigureAwait(false);

@@ -58,25 +58,31 @@ namespace ZyncAudio
             SocketClient.DataReceived = DataReceived;
 
             _handlers.Add(MessageIdentifier.WaveFormatInformation |
-                          MessageIdentifier.AudioProcessing, HandleWaveFormatInformation);
+                          MessageIdentifier.AudioProcessing |
+                          MessageIdentifier.NotUrgent, HandleWaveFormatInformation);
 
             _handlers.Add(MessageIdentifier.AudioSamples |
-                          MessageIdentifier.AudioProcessing, HandleAudioSamples);
+                          MessageIdentifier.AudioProcessing |
+                          MessageIdentifier.NotUrgent, HandleAudioSamples);
 
             _handlers.Add(MessageIdentifier.PlayAudio |
                           MessageIdentifier.AudioProcessing |
                           MessageIdentifier.ProcessImmediately, HandlePlayAudio);
 
             _handlers.Add(MessageIdentifier.StopAudio |
-                          MessageIdentifier.AudioProcessing, HandleStopAudio);
+                          MessageIdentifier.AudioProcessing |
+                          MessageIdentifier.NotUrgent, HandleStopAudio);
 
             _handlers.Add(MessageIdentifier.Volume |
-                          MessageIdentifier.AudioProcessing, HandleVolumeChangeRequest);
+                          MessageIdentifier.AudioProcessing |
+                          MessageIdentifier.NotUrgent, HandleVolumeChangeRequest);
 
             _handlers.Add(MessageIdentifier.TrackInformation |
                           MessageIdentifier.NotUrgent, HandleTrackInformationChanged);
 
-            _handlers.Add(MessageIdentifier.Request | MessageIdentifier.Ping, HandlePingRequest);
+            _handlers.Add(MessageIdentifier.Request |
+                          MessageIdentifier.Ping |
+                          MessageIdentifier.ProcessImmediately, HandlePingRequest);
             _logger = logger;
         }
 
@@ -92,8 +98,8 @@ namespace ZyncAudio
 
             if (_handlers.TryGetValue(messageIdentifier, out Action<byte[]>? handler))
             {
-                if (messageIdentifier.HasFlag(MessageIdentifier.AudioProcessing) &&
-                    !messageIdentifier.HasFlag(MessageIdentifier.ProcessImmediately)
+                if ((messageIdentifier.HasFlag(MessageIdentifier.AudioProcessing) &&
+                    !messageIdentifier.HasFlag(MessageIdentifier.ProcessImmediately))
                     || messageIdentifier.HasFlag(MessageIdentifier.NotUrgent))
                 {
                     // Audio Processing requests go into a separate low priority queue(apart from those flagged as ProcessImmediately)

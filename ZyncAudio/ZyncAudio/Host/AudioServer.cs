@@ -87,7 +87,6 @@ namespace ZyncAudio.Host
             Pinger = new Pinger(SocketServer);
 
             _handlers.Add(MessageIdentifier.Response | MessageIdentifier.Ping, Pinger.PingResponseReceived);
-            _handlers.Add(MessageIdentifier.Request | MessageIdentifier.AudioSamples, HandleSampleRequest);
 
             Pinger.Start();
         }
@@ -177,7 +176,6 @@ namespace ZyncAudio.Host
                         return;
                     }
                 }
-
             }
 
             PlaySong(_lastLoadedFile, _lastLoadedFile, startOffset, preBuffer);
@@ -204,11 +202,11 @@ namespace ZyncAudio.Host
             PlaybackStarted?.Invoke(trackInformation);
 
             // Inform all clients to stop any audio they might be playing.
-            SocketServer.SendAll(BitConverter.GetBytes((int)(MessageIdentifier.StopAudio | MessageIdentifier.AudioProcessing)));
+            SocketServer.SendAll(BitConverter.GetBytes((int)(MessageIdentifier.StopAudio | MessageIdentifier.AudioProcessing | MessageIdentifier.NotUrgent)));
 
             // Send the Wave Format information
             byte[] waveFormatBytes = WaveFormatHelper.ToBytes(waveProvider.WaveFormat);
-            SocketServer.SendAll(ArrayHelpers.CombineArrays(BitConverter.GetBytes((int)(MessageIdentifier.WaveFormatInformation | MessageIdentifier.AudioProcessing)),
+            SocketServer.SendAll(ArrayHelpers.CombineArrays(BitConverter.GetBytes((int)(MessageIdentifier.WaveFormatInformation | MessageIdentifier.AudioProcessing | MessageIdentifier.NotUrgent)),
                                                             waveFormatBytes));
 
             int byteRate = waveProvider.WaveFormat.GetBitrate() / 8; // The bitrate is the number of bits per second, so divide it by 8 to gets the bytes per second.
@@ -264,7 +262,7 @@ namespace ZyncAudio.Host
             // to reuse it if the user is scrubbing through the current song.
             //waveStream?.Dispose();
 
-            SocketServer.SendAll(BitConverter.GetBytes((int)(MessageIdentifier.StopAudio | MessageIdentifier.AudioProcessing)));
+            SocketServer.SendAll(BitConverter.GetBytes((int)(MessageIdentifier.StopAudio | MessageIdentifier.AudioProcessing | MessageIdentifier.NotUrgent)));
 
             // Reset state to stopped.
             _playbackState = PlaybackState.Stopped;
@@ -309,7 +307,7 @@ namespace ZyncAudio.Host
             // to what was actually read from the reader.
             initialSamples = initialSamples.AsSpan(0, initialBytesRead).ToArray();
 
-            server.SendAll(ArrayHelpers.CombineArrays(BitConverter.GetBytes((int)(MessageIdentifier.AudioSamples | MessageIdentifier.AudioProcessing)),
+            server.SendAll(ArrayHelpers.CombineArrays(BitConverter.GetBytes((int)(MessageIdentifier.AudioSamples | MessageIdentifier.AudioProcessing | MessageIdentifier.NotUrgent)),
                                                             initialSamples));
 
             return false;
@@ -391,7 +389,7 @@ namespace ZyncAudio.Host
                     // Trim the buffer to be exactly the length of the amount of bytes read.
                     sampleBuffer = sampleBuffer.AsSpan(0, bytesRead).ToArray();
 
-                    SocketServer.SendAll(ArrayHelpers.CombineArrays(BitConverter.GetBytes((int)(MessageIdentifier.AudioSamples | MessageIdentifier.AudioProcessing)),
+                    SocketServer.SendAll(ArrayHelpers.CombineArrays(BitConverter.GetBytes((int)(MessageIdentifier.AudioSamples | MessageIdentifier.AudioProcessing | MessageIdentifier.NotUrgent)),
                                                                     sampleBuffer));
 
                     // Increment our estimation of how many bytes the clients have.
@@ -445,7 +443,7 @@ namespace ZyncAudio.Host
             // Ensure that Volume does not exceed/preceed valid values.
             volume = Math.Clamp(volume, 0.0f, 1.0f);
 
-            SocketServer.SendAll(ArrayHelpers.CombineArrays(BitConverter.GetBytes((int)(MessageIdentifier.Volume | MessageIdentifier.AudioProcessing)),
+            SocketServer.SendAll(ArrayHelpers.CombineArrays(BitConverter.GetBytes((int)(MessageIdentifier.Volume | MessageIdentifier.AudioProcessing | MessageIdentifier.NotUrgent)),
                                                             BitConverter.GetBytes(volume)));
         }
 
@@ -453,11 +451,6 @@ namespace ZyncAudio.Host
         {
             SocketServer.SendAll(ArrayHelpers.CombineArrays(BitConverter.GetBytes((int)(MessageIdentifier.TrackInformation | MessageIdentifier.NotUrgent)),
                                                             Encoding.UTF8.GetBytes(nowPlayingText)));
-        }
-
-        private void HandleSampleRequest(byte[] _, Socket client)
-        {
-
         }
 
         private void DataReceived(byte[] data, Socket client)
