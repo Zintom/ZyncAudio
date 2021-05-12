@@ -132,6 +132,9 @@ namespace ZyncAudio
                     _rerouteAudioBtn.Enabled = true;
                     _audioLevelsImg.Enabled = true;
                     _volumeControlBar.Enabled = true;
+                    _trackScrubBar.Value = 0;
+                    SetPausedState(true, 0L);
+                    DisableScrubBar();
                     break;
                 case GUIState.AudioRerouterOpened:
                     _closeEntryBtn.Enabled = false;
@@ -148,6 +151,8 @@ namespace ZyncAudio
                     _rerouteAudioBtn.Enabled = false;
                     _audioLevelsImg.Enabled = true;
                     _volumeControlBar.Enabled = true;
+                    _trackScrubBar.Value = 0;
+                    DisableScrubBar();
                     break;
             }
         }
@@ -201,9 +206,19 @@ namespace ZyncAudio
 
                 RefreshNowPlaying();
                 SetPausedState(true);
+                DisableScrubBar();
 
                 _audioServer.ChangeNowPlayingInfo(Program.NoAudioPlaying);
             }
+        }
+
+        private void DisableScrubBar(bool resetPosition = true)
+        {
+            _trackScrubBar.Enabled = false;
+            if (resetPosition) { _trackScrubBar.Value = 0; }
+            _trackElapsedTimeLbl.Enabled = false;
+            _trackElapsedTimeLbl.Text = "00:00";
+            _trackElapsedTimeTicker.Stop();
         }
 
         private void CloseEntryBtn_Click(object sender, EventArgs e)
@@ -355,14 +370,15 @@ namespace ZyncAudio
                     return;
                 }
 
-                _trackElapsedTimeTicker.Start();
                 _trackScrubBar.Enabled = true;
                 _trackScrubBar.Maximum = (int)trackInfo.Length;
+                _trackElapsedTimeTicker.Start();
             }));
         }
 
         private void PlaybackStoppedNaturally()
         {
+            Invoke(new Action(() => DisableScrubBar(true)));
             _playlist.MoveNext();
             _audioServer.PlayAsync(_playlist.Current, TimeSpan.Zero, _preBufferSize);
 
@@ -373,8 +389,8 @@ namespace ZyncAudio
         {
             lock (_mediaActionLockObject)
             {
-                _audioServer.Stop(true);
                 _playlist.MoveNext();
+                _audioServer.Stop(true);
                 _audioServer.PlayAsync(_playlist.Current, TimeSpan.Zero, _preBufferSize);
 
                 if (_playlist.Current == null)
@@ -383,6 +399,7 @@ namespace ZyncAudio
                 }
 
                 SetPausedState(false);
+                DisableScrubBar();
                 RefreshNowPlaying();
             }
         }
@@ -391,8 +408,8 @@ namespace ZyncAudio
         {
             lock (_mediaActionLockObject)
             {
-                _audioServer.Stop(true);
                 _playlist.MovePrevious();
+                _audioServer.Stop(true);
                 _audioServer.PlayAsync(_playlist.Current, TimeSpan.Zero, _preBufferSize);
 
                 if (_playlist.Current == null)
@@ -401,7 +418,7 @@ namespace ZyncAudio
                 }
 
                 SetPausedState(false);
-
+                DisableScrubBar();
                 RefreshNowPlaying();
             }
         }
@@ -415,6 +432,7 @@ namespace ZyncAudio
                 _audioServer.PlayAsync(_playlist.Current, TimeSpan.Zero, _preBufferSize);
 
                 SetPausedState(false);
+                DisableScrubBar();
                 RefreshNowPlaying();
             }
         }
@@ -503,7 +521,7 @@ namespace ZyncAudio
 
             UpdateScrubBarAndText(currentTrackElapsedTime);
 
-            _trackScrubBar.Value = (int)currentTrackElapsedTime.TotalMilliseconds % _trackScrubBar.Maximum;
+            _trackScrubBar.Value = Math.Min((int)currentTrackElapsedTime.TotalMilliseconds, _trackScrubBar.Maximum);
         }
 
         private void UpdateScrubBarAndText(TimeSpan time)
@@ -533,8 +551,7 @@ namespace ZyncAudio
 
         private void TrackScrubBar_MouseUp(object sender, MouseEventArgs e)
         {
-            _trackElapsedTimeTicker.Enabled = false;
-            _trackScrubBar.Enabled = false;
+            DisableScrubBar(false);
             _manualScrubbing = false;
             lock (_mediaActionLockObject)
             {
