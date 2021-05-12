@@ -98,9 +98,7 @@ namespace ZyncAudio
 
             if (_handlers.TryGetValue(messageIdentifier, out Action<byte[]>? handler))
             {
-                if ((messageIdentifier.HasFlag(MessageIdentifier.AudioProcessing) &&
-                    !messageIdentifier.HasFlag(MessageIdentifier.ProcessImmediately))
-                    || messageIdentifier.HasFlag(MessageIdentifier.NotUrgent))
+                if (messageIdentifier.HasFlag(MessageIdentifier.NotUrgent) && !messageIdentifier.HasFlag(MessageIdentifier.ProcessImmediately))
                 {
                     // Audio Processing requests go into a separate low priority queue(apart from those flagged as ProcessImmediately)
                     // as Audio Processing can clog the message pump as it may take from 10-200 ms to complete.
